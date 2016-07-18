@@ -1,0 +1,51 @@
+﻿<style>
+#myModal input{
+    border: none;
+    margin: 0 auto;
+    padding: 5px;
+}
+
+.form_wrap{
+    padding: 10px 9px;
+    width:100%;
+    border-top:1px solid #dadada;
+    border-right:1px solid #dadada;
+    border-left:1px solid #dadada;
+}
+</style>
+
+<!-- Modal 내용 시작 -->
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title" id="myModalLabel">무료체험 학생정보 변경</h4>
+            </div>
+            <div class="modal-body" onkeydown="onKeyDown('mem_info')">
+                <form id="trialform" name="trialform" method="post">
+                    <input type="hidden" id="idx" name="idx" value="" />
+                    <div class="form_wrap">
+                        <label for="name">이름:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</label>
+                        <input type="text" id="name" name="Kor_Name" value="" class="trial_text placeholder" readonly/>
+                    </div>
+                    <div class="form_wrap">
+                        <label for="kakaoid">기존 카톡ID:&nbsp;</label>
+                        <input type="text" id="kakaoid" name="Kakao_ID" value="" class="trial_text placeholder" readonly/>
+                    </div>
+                    <div class="form_wrap">
+                        <label for="newkakaoid">현재 카톡ID:&nbsp;</label>
+                        <input type="text" id="newkakaoid" name="newKakao_ID" value="" class="trial_text placeholder" />
+                    </div>
+                    <div class="modal-footer" style="padding-top:10px;">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="kkdinfo()">Save</button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>

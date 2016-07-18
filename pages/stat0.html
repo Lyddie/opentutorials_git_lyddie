@@ -1,0 +1,501 @@
+﻿<?php
+include "{$_SERVER[DOCUMENT_ROOT]}/include/config.php";
+include "./session_admin.php";
+mysql_query("SET NAMES utf8");
+// GET memberId
+if($_GET['memberId'] != ""){
+    $memberId = $_GET['memberId'];
+} else {
+    $memberId = "";
+}
+// GET idx
+if($_GET['idx'] != ""){
+    $idx = $_GET['idx'];
+} else {
+    $idx = "";
+}
+// GET newmemberid
+if($memberId == "" && $idx == "" && $_GET['newmemberid'] != ""){
+    $newmemberid = $_GET['newmemberid'];
+} else{
+    $newmemberid = "";
+}
+if($_REQUEST['mode']=="update"){
+    // MEMBER 테이블
+    $No = $_REQUEST['No'];
+    $KaKaoId = $_REQUEST['KaKaoId'];
+    $MemberName = $_REQUEST['MemberName'];
+    $MemberId = $_REQUEST['MemberId'];
+    $Email = $_REQUEST['Email'];
+    $Hp = $_REQUEST['Hp'];
+    $Study = $_REQUEST['Study'];
+    $SNS = $_REQUEST['SNS'];
+    $Job = $_REQUEST['Job'];
+    // Tutoring 테이블
+    $RegDate = $_REQUEST['RegDate'];
+    $in_bank = $_REQUEST['in_bank'];
+    // update는 여기부터
+    $RealReg = $_REQUEST['RealReg'];
+    $Tutor = $_REQUEST['Tutor'];
+    $Course = $_REQUEST['Course'];
+    $Refund = $_REQUEST['Refund'];
+    $RefundDate = $_REQUEST['RefundDate'];
+    $BanTime = $_REQUEST['BanTime'];
+    $Ban = $_REQUEST['Ban'];
+    $CntTime = $_REQUEST['CntTime'];
+    $Term = $_REQUEST['Term'];
+    $BeginDay = $_REQUEST['BeginDay'];
+    $FinishDate = $_REQUEST['FinishDate'];
+    $FreeTutor = $_REQUEST['FreeTutor'];
+    $Path = $_REQUEST['Path'];
+    $Repurchase = $_REQUEST['Repurchase'];
+    $Change1 = $_REQUEST['Change1'];
+    $Change2 = $_REQUEST['Change2'];
+    $Change3 = $_REQUEST['Change3'];
+    $Change4 = $_REQUEST['Change4'];
+    $State = $_REQUEST['State'];
+    $Holding = $_REQUEST['Holding'];
+    $Reason = $_REQUEST['Reason'];
+    $etc = $_REQUEST['etc'];
+    if($memberId=="" && $idx==""){
+        // Tutoring 새로운 data 저장
+        // 등록날짜를 기입하지 않으면 저장 날짜의 00시로 들어감
+        if($RegDate == ""){$RegDate = date("Y-m-d", mktime());}
+        $sql = "INSERT INTO Tutoring 
+                    (No, MemberName, MemberId, RegDate, Tutor, Course, BanTime, Ban, CntTime, Term, BeginDay, FinishDate, FreeTutor, Path, Repurchase, Change1, Change2, Change3, Change4) 
+                VALUES 
+                    ('$No', '$MemberName', '$MemberId', DATE_FORMAT('$RegDate 00:00:00', '%Y-%m-%d %T'), '$Tutor', '$Course', '$BanTime', '$Ban', '$CntTime', '$Term', '$BeginDay', '$FinishDate', '$FreeTutor', '$Path', '$Repurchase', '$Change1', '$Change2', '$Change3', '$Change4')
+                ;";
+        $result = mysql_query($sql, $dbconn) or die(mysql_error());
+        echo "<script>alert('저장완료')</script>";
+    } else{
+        // Tutoring data 수정
+        $sql = "UPDATE Tutoring
+                SET
+                    Tutor='$Tutor'
+                    , Course='$Course'
+                    , Refund='$Refund'
+                    , RefundDate='$RefundDate'
+                    , BanTime='$BanTime'
+                    , Ban='$Ban'
+                    , CntTime='$CntTime'
+                    , Term='$Term'
+                    , FreeTutor='$FreeTutor'
+                    , Path='$Path'
+                    , Repurchase='$Repurchase'
+                    , Change1='$Change1'
+                    , Change2='$Change2'
+                    , Change3='$Change3'
+                    , Change4='$Change4'
+                    , State='$State'
+                    , Holding='$Holding'
+                    , Reason='$Reason'
+                    , etc='$etc'
+                    , FinishDate='$FinishDate'
+                    , RealReg='$RealReg'
+                WHERE
+                    idx=$idx
+                ; ";
+        $result = mysql_query($sql, $dbconn) or die(mysql_error());
+        echo "<script>alert('수정완료')</script>";
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>SB Admin 2 - Bootstrap Admin Theme</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="../bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- MetisMenu CSS -->
+    <link href="../bower_components/metisMenu/dist/metisMenu.min.css" rel="stylesheet">
+    <!-- Timeline CSS -->
+    <!-- Custom CSS -->
+    <link href="../dist/css/sb-admin-2.css" rel="stylesheet">
+    <!-- Morris Charts CSS -->
+
+    <!-- Custom Fonts -->
+    <link href="../bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <style>
+        h3 {
+            text-align: left;
+            text-decoration: underline;
+        }
+
+        td {
+            padding: 0;
+        }
+
+        form[name='myform'] input {
+            margin: 0;
+            border-style: hidden;
+        }
+        
+        #myModal input {
+            border: none;
+            margin: 0 auto;
+            padding: 5px;
+        }
+
+        .form_wrap {
+            padding: 10px 9px;
+            width: 100%;
+            border-top: 1px solid #dadada;
+            border-right: 1px solid #dadada;
+            border-left: 1px solid #dadada;
+        }
+    </style>
+</head>
+<body>
+    <div id="wrapper">
+        <? include "../common/include/nav.html"; ?>
+        <!-- Navigation -->
+        <div id="page-wrapper">
+            <div class="row">
+                <div class="col-lg-12">
+                    <h1 class="page-header">결제정보검색/수정</h1>
+                </div>
+                <!-- /.col-lg-12 -->
+                <div class="col-md-6 col-xs-12">
+                    <form name="" method="get">
+                        <input type="hidden" name="idx" value="<?=$idx?>" />
+                        <input type="text" name="memberId" value="<?=$memberId?>" placeholder="KakaoId or MemberId" style="width:200px;" />&nbsp;<button class="btn btn-sm btn-default">search</button>
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>No.</th>
+                                    <th>회원아이디</th>
+                                    <th>구매일</th>
+                                    <th>프로그램</th>
+                                    <th>개월수</th>
+                                    <th>보기</th>
+                                </tr>
+                                <?
+                                        // 회원 또는 카카오아이디 검색
+                                        if($memberId != ""){
+                                            $sql = "SELECT T.* FROM Tutoring T 
+                                                    INNER JOIN MEMBER M 
+                                                    ON 
+                                                        T.MemberId=M.MemberId
+                                                    WHERE 
+                                                        T.MemberId LIKE '%$memberId%' 
+                                                        OR T.MemberName LIKE '%$memberId%' 
+                                                        OR M.KaKaoId LIKE '%$memberId%'
+                                                    ORDER BY
+                                                        T.idx desc
+                                                    ;";
+                                            $result=mysql_query($sql, $dbconn);
+                                            while($row=mysql_fetch_array($result)){
+                                                echo "
+                                                    <tr>
+                                                        <td>".$row[idx]."</td>
+                                                        <td><a href='stat0.html?memberId=$memberId&idx=".$row[idx]."'>".$row[MemberId]."</a></td>
+                                                        <td>".$row[RegDate]."</td>
+                                                        <td>".$row[Course]."</td>
+                                                        <td>".$row[Term]."</td>
+                                                        <td></td>
+                                                    </tr>
+                                                ";
+                                            }
+                                        }
+                                ?>
+                                </tbody>
+                        </table>
+                    </form>
+                </div>
+                <div class="col-md-6 col-xs-12">
+                    <h3>결제정보생성/수정</h3>
+                    <form action="stat0.html?memberId=<?=$memberId?>&idx=<?=$idx?>" name="myform" method="post">
+                        <input type="hidden" name="mode" value="" />
+                        <?
+                        if($idx != ""){
+                            // idx 로 Tutoring, MEMBER 정보 가져오기
+                            $sql = "SELECT T.*, M.num, M.KaKaoId, M.Email, M.Hp, M.Study, M.SNS, M.Job 
+                                    FROM Tutoring T ,MEMBER M 
+                                    WHERE 
+                                        T.idx='".$idx."' 
+                                        AND T.MemberId=M.MemberId 
+                                ;";
+                            $result = mysql_query($sql, $dbconn);
+                            $row=mysql_fetch_array($result);
+                        } else if($newmemberid != "" && $memberId==""){
+                        /*
+                            // add new Tutoring data
+                            // Tutoring No 생성
+                            $yearnum = 1602;    // 2016-02
+                            $newno = 1;         // 1번 결제자
+                            $sql = "select No from Tutoring where date_format(RegDate, '%Y-%m') = date_format(now(), '%Y-%m');";
+                            $result = mysql_query($sql, $dbconn);
+                            while($row = mysql_fetch_array($result)){
+                                $numstr = explode("-", $row[No]);
+                                if($newno <= (int)$numstr[1]){
+                                    $yearnum = (int)$numstr[0];
+                                    $newno = 1 + (int)$numstr[1];
+                                }
+                            }
+                            // newmemberid(new member id)로 MEMBER 정보 가져오기
+                            $sql = "select * from MEMBER where MemberId='$newmemberid';";
+                            $result = mysql_query($sql, $dbconn);
+                            $row = mysql_fetch_array($result) or die(mysql_error());
+                            // No 설정
+                            $row[No] = $yearnum."-".$newno;
+                            // MEMBER RegDate와 Tutoring RegDate의 컬럼명이 겹치므로 RegDate 초기화
+                            $row[RegDate] = "";
+                            // 등록일 input disabled 해제
+                            echo "<script>$('#RegDate').prop('disabled', false);</script>";
+                            */
+                        }
+                        ?>
+                        <table class="table table-bordered">
+                            <tr>
+                                <td>No.</td>
+                                <td><input type="text" name="No" value="<?=$row[idx]?>" disabled /></td>
+                                <td>KakaoId</td>
+                                <td><input type="text" name="KaKaoId" value="<?=$row[KaKaoId]?>" disabled /></td>
+                            </tr>
+                            <tr>
+                                <td>이름</td>
+                                <td><input type="text" name="MemberName" value="<?=$row[MemberName]?>" disabled /></td>
+                                <td>아이디</td>
+                                <td><input type="text" name="MemberId" value="<?=$row[MemberId]?>" disabled /></td>
+                            </tr>
+                            <tr>
+                                <td>이메일</td>
+                                <td><input type="text" name="Email" value="<?=$row[Email]?>" disabled /></td>
+                                <td>전화번호</td>
+                                <td><input type="text" name="Hp" value="<?=$row[Hp]?>" disabled /></td>
+                            </tr>
+                            <tr>
+                                <td>담당튜터</td>
+                                <td>
+                                    <select name="Tutor">
+                                        <option value="<?=$row[Tutor]?>"><?=$row[Tutor]?></option>
+                                        <?
+                                            $sql2 = "select Name_Tutor from Tutor;";
+                                            $result2 = mysql_query($sql2, $dbconn);
+                                            while($row2 = mysql_fetch_array($result2)){
+                                                echo "<option value='$row2[Name_Tutor]'>$row2[Name_Tutor]</option>";
+                                            }
+                                        ?>
+                                    </select>
+                                </td>
+                                <td>컨텐츠</td>
+                                <td><input type="text" name="Course" value="<?=$row[Course]?>" /></td>
+                            </tr>
+                            <tr>
+                                <td>시간</td>
+                                <td><input type="text" name="BanTime" value="<?=$row[BanTime]?>" /></td>
+                                <td>종류</td>
+                                <td>
+                                    <select name="Ban">
+                                        <option value="<?=$row[Ban]?>"><?=$row[Ban]?></option>
+                                        <option value="텔라톡(25분)">텔라톡(25분)</option>
+                                        <option value="텔라톡(55분)">텔라톡(55분)</option>
+                                        <option value="텔라콜(10분)">텔라콜(10분)</option>
+                                        <option value="톡(25분)/콜(10분)">톡(25분)/콜(10분)</option>
+                                        <option value="톡(55분)/콜(10분)">톡(55분)/콜(10분)</option>
+                                    </select>
+
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>횟수</td>
+                                <td>
+                                    <select name="CntTime">
+                                        <option value="<?=$row[CntTime]?>"><?=$row[CntTime]?></option>
+                                        <option value="주 2회">주 2회</option>
+                                        <option value="주 3회">주 3회</option>
+                                        <option value="주 5회">주 5회</option>
+                                        <option disabled>(텔라콜: 개발팀에 요청)</option>
+                                    </select>
+                                </td>
+                                <td>개월</td>
+                                <td>
+                                    <select name="Term">
+                                        <option value="<?=$row[Term]?>"><?=$row[Term]?></option>
+                                        <option value="1개월">1개월</option>
+                                        <option value="3개월">3개월</option>
+                                        <option value="6개월">6개월</option>
+                                        <option value="12개월">12개월</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>결제(신청)일</td>
+                                <td><input type="text" id="RegDate" name="RegDate" value="<?=$row[RegDate]?>" disabled /></td>
+                                <td>실제결제일(무통장)</td>
+                                <td><input type="date" id="RealReg" name="RealReg" value="<?=$row[RealReg]?>" /></td>
+                            </tr>
+                            <tr>
+                                <td>시작일</td>
+                                <td><input type="text" name="BeginDay" value="<?=$row[BeginDay]?>" disabled /></td>
+                                <td>종료일</td>
+                                <td><input type="date" name="FinishDate" value="<?=$row[FinishDate]?>" /></td>
+                            </tr>
+                            <tr>
+                                <td>체험튜터</td>
+
+                                <td>
+                                    <select name="FreeTutor">
+                                        <option value="<?=$row[FreeTutor]?>"><?=$row[FreeTutor]?></option>
+                                        <?
+                                            $sql2 = "select Name_Tutor from Tutor;";
+                                            $result2 = mysql_query($sql2, $dbconn);
+                                            while($row2 = mysql_fetch_array($result2)){
+                                                echo "<option value='$row2[Name_Tutor]'>$row2[Name_Tutor]</option>";
+                                            }
+                                        ?>
+                                    </select>
+                                </td>
+                                <td>유입경로</td>
+                                <td><input type="text" name="Path" value="<?=$row[Path]?>" /></td>
+                            </tr>
+                            <tr>
+                                <td>공부목적</td>
+                                <td><input type="text" name="Study" value="<?=$row[Study]?>" /></td>
+                                <td>알게된경로</td>
+                                <td><input type="text" name="ContactPath" value="<?=$row[SNS]?>" /></td>
+                            </tr>
+                            <tr>
+                                <td>직업</td>
+                                <td><input type="text" name="Job" value="<?=$row[Job]?>" /></td>
+                                <td>신규(0)/재구매(1)</td>
+                                <td><input type="text" name="Repurchase" value="<?=$row[Repurchase]?>" /></td>
+                            </tr>
+                            <tr>
+                                <td>1차변경</td>
+                                <td><input type="text" name="Change1" value="<?=$row[Change1]?>" /></td>
+                                <td>2차변경</td>
+                                <td><input type="text" name="Change2" value="<?=$row[Change2]?>" /></td>
+                            </tr>
+                            <tr>
+                                <td>3차변경</td>
+                                <td><input type="text" name="Change3" value="<?=$row[Change3]?>" /></td>
+                                <td>4차변경</td>
+                                <td><input type="text" name="Change4" value="<?=$row[Change4]?>" /></td>
+                            </tr>
+                            <tr>
+                                <td>주문금액</td>
+                                <td><?=number_format($row[OrderPrice])?>   </td>
+                                <td>할인금액</td>
+                                <td><?=number_format($row[Discount])?></td>
+                            </tr>
+                            <tr>
+                                <td>결제금액</td>
+                                <td><?=number_format($row[PayPrice])?></td>
+                                <td>결제방법</td>
+                                <td>
+                                    <?
+if($row[pay_type] == 1){ echo '무통장입금';}
+                                        if($row[pay_type] == 2){ echo '카드결제';}
+                                        if($row[pay_type] == 3){ echo '에스크로';}
+                                        if($row[pay_type] == 4){ echo '카카오페이';}
+                                    ?>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>환불금액</td>
+                                <td><input type="text" name="Refund" value="<?=number_format($row[Refund])?>" /></td>
+                                <td>환불일자</td>
+                                <td><input type="date" name="RefundDate" value="<?if($row[RefundDate] != "0000-00-00") echo $row[RefundDate];?>" /></td>
+                            </tr>
+                            <tr>
+                                <td>상태</td>
+                                <td>
+                                    <select name="State">
+                                        <option value="1" <?if($row[State]==1) { ?> selected <? } ?>>결제완료</option>
+                                        <option value="2" <?if($row[State]==2) { ?> selected <? } ?>>결제대기</option>
+                                        <option value="3" <?if($row[State]==3) { ?> selected <? } ?>>환불</option>
+                                        <option value="4" <?if($row[State]==4) { ?> selected <? } ?>>취소</option>
+                                    </select>
+                                </td>
+                                <td>무통장은행</td>
+                                <td><?=$row[in_bank]?></td>
+                            </tr>
+                            <tr>
+                                <td>연기가능횟수</td>
+                                <td><input type=text name="Holding" value="<?=$row[Holding]?>" /></td>
+                                <td>취소사유</td>
+                                <td><textarea rows="1" cols="25" name="Reason"><?=$row[Reason]?></textarea></td>
+                            </tr>
+                            <tr>
+                                <td>기타</td>
+                                <td colspan="3"><textarea rows="3" cols="70" name="etc"><?=$row[etc]?></textarea></td>
+                            </tr>
+                        </table>
+                        <div style="text-align: right;">
+                            <input type="hidden" name="N_Tutoring" value="<?=$row[idx]?>" />
+                            <input type="hidden" name="mem_num" value="<?=$row[num]?>" />
+                            <input type="hidden" id="holdingHp" value="<?=$row[Hp]?>" />
+                            <button type="button" class="btn btn-primary btn-md" onclick="javascript: $('#myModal').modal('show');">연기</button>
+                            <button type="button" class="btn btn-primary btn-md" onclick="dbupdate()">SAVE</button>
+                        </div>
+                        <!--modal start-->
+                        <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                        <h4 class="modal-title" id="myModalLabel">연기날짜 선택</h4>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="form_wrap">
+                                            <label for="name">연기일:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</label>
+                                            <input type="date" name="holding_date" value="<?=date("Y-m-d", strtotime("now"))?>" class="trial_text placeholder" />
+                                        </div>
+                                        <div class="modal-footer" style="padding-top:10px;">
+                                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                            <button type="button" class="btn btn-primary" onclick="createHolding()">Save</button>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                        <!--modal finish-->
+                    </form>
+                </div>                
+                <?
+                        $url = $_SERVER[PHP_SELF];
+                        $url_arr = explode("/", $url);
+                        $url = $url_arr[count($url_arr) - 1];
+                ?>
+                <div style="text-align: right; color: gray;">마지막수정: <?=date("Ymd H:i:s",filemtime($url))?></div>
+            </div>
+            <!-- /.row -->     
+        </div>
+        <!-- /#page-wrapper -->
+
+    </div>
+    <!-- /#wrapper -->
+
+    <!-- jQuery -->
+    <script src="../bower_components/jquery/dist/jquery.min.js"></script>
+    <!-- Bootstrap Core JavaScript -->
+    <script src="../bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    <!-- Metis Menu Plugin JavaScript -->
+    <script src="../bower_components/metisMenu/dist/metisMenu.min.js"></script>
+    <!-- Custom Theme JavaScript -->
+    <script src="../dist/js/sb-admin-2.js"></script>
+    <script src="../js/js.js?v=<?=mktime()?>"></script>
+</body>
+
+</html>

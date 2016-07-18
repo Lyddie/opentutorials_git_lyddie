@@ -1,0 +1,343 @@
+﻿<?php
+include "{$_SERVER[DOCUMENT_ROOT]}/include/config.php";
+include "./session_admin.php";
+// 직업 array
+$job = array("초등학생", "중학생", "고등학생", "대학(원)생", "직장인", "주부", "기타");
+$SNS = array("페이스북", "영어 톡톡", "지인소개", "검색", "기타");
+$Study = array("일상생활", "비지니스", "시험준비", "어학연수,교환학생");
+$type = array($job, $SNS, $Study);
+$typename = array("Job", "SNS", "Study");
+// 직업쿼리
+$sql = "select ";
+for($j=0; $j<count($type); $j++){
+    for($i=0; $i<count($type[$j]); $i++){
+        // 가입자수
+        $sql.= "(select count(*) from MEMBER where ".$typename[$j]." like '%".$type[$j][$i]."%' and state='1') as ".$typename[$j]."_std".$i.", ";
+        // 실결제자수(아이디 중복 제외)
+        $sql.= "(select count(distinct A.MemberId) from ";
+        $sql.= "(select T.MemberId from Tutoring T inner join MEMBER M on T.MemberId=M.MemberId ";
+        $sql.= "where T.State=1 and M.".$typename[$j]." like '%".$type[$j][$i]."%') A ) as ".$typename[$j]."_tutmemcnt".$i.", ";
+        // 결제 횟수(아이디 중복 포함)
+        $sql.= "(select count(*) from MEMBER M inner join Tutoring T on M.MemberId=T.MemberId where M.".$typename[$j]." like '%".$type[$j][$i]."%' and T.State='1') ";
+        $sql.= "as ".$typename[$j]."_tutcnt".$i.", ";
+        // 재구매자수
+        $sql.= "(select count(*) from (select A.* from (";
+        $sql.= "select MemberId, count(*) as cntTutoring from Tutoring where State=1 ";
+        $sql.= "group by MemberId having count(*) > 1) A inner join MEMBER M on A.MemberId=M.MemberId ";
+        $sql.= "where M.".$typename[$j]." like '%".$type[$j][$i]."%') B) as ".$typename[$j]."_recnt$i, ";
+        // 재구매횟수
+        $sql.= "(select sum(B.cntTutoring) from (select A.* from (";
+        $sql.= "select MemberId, count(*) as cntTutoring from Tutoring where State=1 ";
+        $sql.= "group by MemberId having count(*) > 1) A inner join MEMBER M on A.MemberId=M.MemberId ";
+        $sql.= "where M.".$typename[$j]." like '%".$type[$j][$i]."%') B) as ".$typename[$j]."_repurcnt$i, ";
+        // 재구매율
+        // 평균이용기간
+        $sql.= "(select avg(B.totalTerm) from (select A.* from (";
+        $sql.= "select MemberId, count(*) as cntTutoring, sum(cast(replace(Term, '개월', '') as signed)) as totalTerm from Tutoring where State=1 ";
+        $sql.= "group by MemberId) A inner join MEMBER M on A.MemberId=M.MemberId where M.".$typename[$j]." like '%".$type[$j][$i]."%') B) as ".$typename[$j]."_termave$i, ";
+        // 재구매자 평균이용기간
+        $sql.= "(select avg(B.totalTerm) from (select A.* from (";
+        $sql.= "select MemberId, count(*) as cntTutoring, sum(cast(replace(Term, '개월', '') as signed)) as totalTerm from Tutoring where State=1 ";
+        $sql.= "group by MemberId having count(*) > 1) A inner join MEMBER M on A.MemberId=M.MemberId ";
+        $sql.= "where M.".$typename[$j]." like '%".$type[$j][$i]."%') B) as ".$typename[$j]."_retermave$i, ";
+        // 총 결제액
+        $sql.= "(select sum(A.PayPrice) from (select PayPrice from Tutoring T inner join MEMBER M on T.MemberId=M.MemberId ";
+        $sql.= "where T.State='1' and M.".$typename[$j]." like '%".$type[$j][$i]."%') A ) as ".$typename[$j]."_totalpay$i, ";
+        // 평균답장속도(튜터)
+        $sql.= "(select Average_tutor from Chat_Avg where TypeName='".$typename[$j]."' and Type='".$type[$j][$i]."') as ".$typename[$j]."_torspdave$i, ";
+        // 평균답장속도(튜티)
+        $sql.= "(select Average_tutee from Chat_Avg where TypeName='".$typename[$j]."' and Type='".$type[$j][$i]."') as ".$typename[$j]."_teespdave$i, ";
+        // 재구매자 평균답장속도(튜터)
+        $sql.= "(select Average_tutor_re from Chat_Avg where TypeName='".$typename[$j]."' and Type='".$type[$j][$i]."') as ".$typename[$j]."_retorspdave$i, ";
+        // 재구매자 평균답장속도(튜티)
+        $sql.= "(select Average_tutee_re from Chat_Avg where TypeName='".$typename[$j]."' and Type='".$type[$j][$i]."') as ".$typename[$j]."_reteespdave$i, ";
+        // 평균대화건수(튜터)
+        $sql.= "(select Cnt_tutor from Chat_Avg where TypeName='".$typename[$j]."' and Type='".$type[$j][$i]."') as ".$typename[$j]."_torchatcnt$i, ";
+        // 평균대화건수(튜티)
+        $sql.= "(select Cnt_tutee from Chat_Avg where TypeName='".$typename[$j]."' and Type='".$type[$j][$i]."') as ".$typename[$j]."_teechatcnt$i, ";
+        // 재구매자 평균대화건수(튜터)
+        $sql.= "(select Cnt_tutor_re from Chat_Avg where TypeName='".$typename[$j]."' and Type='".$type[$j][$i]."') as ".$typename[$j]."_retorchatcnt$i, ";
+        // 재구매자 평균대화건수(튜티)
+        $sql.= "(select Cnt_tutee_re from Chat_Avg where TypeName='".$typename[$j]."' and Type='".$type[$j][$i]."') as ".$typename[$j]."_reteechatcnt$i, ";
+    }
+}
+$sql = trim($sql, ", ");
+$sql.= " from dual;  ";
+$result = mysql_query($sql, $dbconn) or die(mysql_error());
+$row = mysql_fetch_array($result);
+?>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>SB Admin 2 - Bootstrap Admin Theme</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="../bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- MetisMenu CSS -->
+    <link href="../bower_components/metisMenu/dist/metisMenu.min.css" rel="stylesheet">
+    <!-- Timeline CSS -->
+    <!-- Custom CSS -->
+    <link href="../dist/css/sb-admin-2.css" rel="stylesheet">
+    <!-- Morris Charts CSS -->
+
+    <!-- Custom Fonts -->
+    <link href="../bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <style>
+        h3 {
+            text-align: left;
+            text-decoration: underline;
+        }
+
+        td {
+            padding: 0;
+        }
+
+        input {
+            margin: 0;
+            border-style: hidden;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <? include "../common/include/nav.html"; ?>
+        <!-- Navigation -->
+        <div id="page-wrapper">
+            <div class="row">
+                <div class="col-lg-12">
+                    <h1 class="page-header">회원통계</h1>
+                </div>
+                <!-- /.col-lg-12 -->
+            </div>
+            <!-- /.row -->
+            <div class="row">
+                <div class="col-lg-12">
+                    <form name="myform" method="post">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h3>회원가입별 통계</h3>
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th>가입자수</th>
+                                            <th>실결제자수</th>
+                                            <th>결제횟수</th>
+                                            <th>재구매자수</th>
+                                            <th>재구매횟수<br />(재구매자 최초결제 제외)</th>
+                                            <th>재구매율<br />재구매횟수 / (결제횟수 - 재구매횟수)</th>
+                                            <th>평균이용기간</th>
+                                            <th>재구매자<br />평균이용기간</th>
+                                            <th>총 결제액</th>
+                                            <th>평균답장속도(튜터)</th>
+                                            <th>평균답장속도(튜티)</th>
+                                            <th>재구매자</br>평균답장속도(튜터)</th>
+                                            <th>재구매자</br>평균답장속도(튜티)</th>
+                                            <th>평균대화건수(튜터)</th>
+                                            <th>평균대화건수(튜티)</th>
+                                            <th>재구매자</br>평균대화건수(튜터)</th>
+                                            <th>재구매자</br>평균대화건수(튜티)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?
+                                for($j=0; $j<count($type); $j++){
+                                    if($j==0) echo "<tr><td colspan='18' style='background-color:#99b3ff;'>직업</td></tr>";
+                                    else if($j==1) echo "<tr><td colspan='18' style='background-color:#99b3ff;'>유입경로</td></tr>";
+                                    else if($j==2) echo "<tr><td colspan='18' style='background-color:#99b3ff;'>공부목적</td></tr>";
+                                    $sum = 0;    // 타입별 총 결제액
+                                    for($i=0; $i<count($type[$j]); $i++){
+                                        $sum += $row[$typename[$j].'_totalpay'.$i];
+                                    }
+                                    for($i=0; $i<count($type[$j]); $i++){
+                                        // 재구매횟수
+                                        $repurcnt = $row[$typename[$j].'_tutcnt'.$i] - $row[$typename[$j].'_tutmemcnt'.$i];
+                                        // 재구매율(백분율) = 100 * 재구매횟수 / (결제횟수 - 재구매횟수)
+                                        $repurrate = round(100 * $repurcnt / ($row[$typename[$j].'_tutcnt'.$i] - $repurcnt), 2);
+                                        echo "
+                                            <tr>
+                                                <td>".$type[$j][$i]."</td>
+                                                <td>".$row[$typename[$j].'_std'.$i]."</td>
+                                                <td>".$row[$typename[$j].'_tutmemcnt'.$i]."</td>
+                                                <td>".$row[$typename[$j].'_tutcnt'.$i]."</td>
+                                                <td>".$row[$typename[$j].'_recnt'.$i]."</td>
+                                                <td>".$repurcnt."</td>
+                                                <td>".$repurrate."%</td>
+                                                <td>".$row[$typename[$j].'_termave'.$i]."</td>
+                                                <td>".$row[$typename[$j].'_retermave'.$i]."</td>
+                                                <td style='text-align:right;'>".number_format($row[$typename[$j].'_totalpay'.$i])." (".round((100 * $row[$typename[$j].'_totalpay'.$i] / $sum), 2)."%)</td>
+                                                <td>".round($row[$typename[$j].'_torspdave'.$i], 4)."</td>
+                                                <td>".round($row[$typename[$j].'_teespdave'.$i], 4)."</td>
+                                                <td>".round($row[$typename[$j].'_retorspdave'.$i], 4)."</td>
+                                                <td>".round($row[$typename[$j].'_reteespdave'.$i], 4)."</td>
+                                                <td>".round($row[$typename[$j].'_torchatcnt'.$i], 4)."</td>
+                                                <td>".round($row[$typename[$j].'_teechatcnt'.$i], 4)."</td>
+                                                <td>".round($row[$typename[$j].'_retorchatcnt'.$i], 4)."</td>
+                                                <td>".round($row[$typename[$j].'_reteechatcnt'.$i], 4)."</td>
+                                            </tr>
+                                        ";
+                                    }
+                                }
+                                        ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-md-4">
+                                <h3>연도별 통계</h3>
+                                <?
+                     /*
+                        // 회원 Birthyy 최소 연도
+                        $sql = "SELECT MIN(CAST(Birthyy AS UNSIGNED)) AS min
+                                FROM MEMBER
+                                WHERE
+                                    Birthyy IS NOT NULL
+                                    AND CAST(Birthyy AS UNSIGNED) != 0
+                                ;";
+                        $result = mysql_query($sql, $dbconn) or die(mysql_error());
+                        $row = mysql_fetch_array($result);
+                        $minBirthyy = $row[min];
+                        echo "minBirthyy: ".$minBirthyy;
+                        exit;
+                    */
+                        $sql = "SELECT
+                                    DISTINCT MEM.Birthyy
+                                    ,COUNT(DISTINCT MEM.num) AS _std
+                                    ,COUNT(DISTINCT TUT.MemberId) AS _tutmemcnt
+                                    ,COUNT(TUT.idx) AS _tutcnt
+                                FROM
+                                    MEMBER MEM
+                                LEFT JOIN
+                                    (SELECT * FROM Tutoring WHERE State=1) TUT
+                                ON
+                                    MEM.MemberId=TUT.MemberId
+                                WHERE
+                                    MEM.state='1'
+                                    AND MEM.Birthyy is not null
+                                    AND MEM.Birthyy != ''
+                                GROUP BY
+                                    MEM.Birthyy
+                                ORDER BY
+                                    MEM.Birthyy ASC
+                                        ";
+                        $result = mysql_query($sql, $dbconn) or die(mysql_error());
+                                ?>
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>연도</th>
+                                            <th>가입자수</th>
+                                            <th>실결제자수</th>
+                                            <th>결제횟수</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?
+                            $nowyear = (int)date_format(date_create(), "Y");
+                            $age = 0;
+                            while($row = mysql_fetch_array($result)){
+                                $age = $nowyear - (int)$row[Birthyy] + 1;
+                                        ?>
+                                        <tr>
+                                            <td><?=$row[Birthyy]?> (<?=$age?>세)</td>
+                                            <td><?=$row[_std]?></td>
+                                            <td><?=$row[_tutmemcnt]?></td>
+                                            <td><?=$row[_tutcnt]?></td>
+                                        </tr>
+                                        <?}?>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="col-md-4">
+                                <h3>회원가입 이후 결제까지 걸리는 시간</h3>
+                                <p style="color:dimgray;font-size:small;">0보다 작은 값은 팀장님 친구분. 결제 후 회원가입.</p>
+                                <?
+                        $sql = "SELECT C.diff, COUNT(C.MemberId) as cnt FROM ( 
+                                    SELECT A.MemberId, DATEDIFF(B.RegDate, A.RegDate) diff FROM 
+                                        (SELECT MemberId, RegDate FROM MEMBER) A 
+                                        LEFT JOIN
+                                        (SELECT MemberId, RegDate FROM Tutoring GROUP BY MemberId) B 
+                                        ON A.MemberId=B.MemberId 
+                                        WHERE B.RegDate IS NOT NULL
+                                    ) C 
+                                GROUP BY C.diff
+                                ";
+                        $result = mysql_query($sql, $dbconn) or die(mysql_error());
+                                ?>
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>days</th>
+                                            <th>count</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?
+                            $i=0;
+                            while($row = mysql_fetch_array($result)){
+                                        ?>
+                                        <tr>
+                                            <td><?echo ++$i;?></td>
+                                            <td><?=$row[diff]?></td>
+                                            <td><?=$row[cnt]?></td>
+                                        </tr>
+                                        <?}?>
+                                    </tbody>
+                                </table>
+                                </div>
+                            </div>
+                        <?
+            // 데이터베이스와의 접속 종료
+            mysql_close();
+                        ?>
+                    </form>
+                    <?
+                            $url = $_SERVER[PHP_SELF];
+                            $url_arr = explode("/", $url);
+                            $url = $url_arr[count($url_arr) - 1];
+                    ?>
+                    <div style="text-align: right; color: gray;">마지막수정: <?=date("Ymd H:i:s",filemtime($url))?></div>
+                </div>
+            </div>
+            <!-- /.row -->           
+        </div>
+        <!-- /#page-wrapper -->
+
+    </div>
+    <!-- /#wrapper -->
+
+    <!-- jQuery -->
+    <script src="../bower_components/jquery/dist/jquery.min.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="../bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+
+    <!-- Metis Menu Plugin JavaScript -->
+    <script src="../bower_components/metisMenu/dist/metisMenu.min.js"></script>
+
+    
+
+    <!-- Custom Theme JavaScript -->
+    <script src="../dist/js/sb-admin-2.js"></script>
+
+</body>
+
+</html>

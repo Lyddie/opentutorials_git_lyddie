@@ -1,0 +1,257 @@
+﻿<?php
+include "{$_SERVER[DOCUMENT_ROOT]}/include/config_lyddie.php";
+include "./session_admin.php";
+
+// post 메소드로 전달된 값 받아오기
+$KaKaoId = $_GET['kkd'];
+$search = $_GET['search'];
+$show = 20;
+// Get page_cnt
+$sql = "select count(*) from chat_static_tutoring CST, Tutoring_list TL, MEMBER M ";
+$sql.= "where (M.MemberId like '%$search%' or M.MemberName like '%$search%' or M.KaKaoId like '%$search%') ";
+if($KaKaoId != "") $sql.= "and M.MemberId = '$KaKaoId' ";
+$sql.= "and TL.N_Student = M.num and CST.N_Tutoring_list = TL.N_Tutoring_list ";
+$sql.= "order by CST.N_CST desc ";
+$result = mysql_query($sql, $dbconn) or die(mysql_error());
+$page_cnt = mysql_result($result, 0, 0);
+if($page_cnt % $show == 0){
+$page_cnt = ($page_cnt - ($page_cnt % $show)) / $show;
+} else{
+$page_cnt = ($page_cnt - ($page_cnt % $show)) / $show + 1;
+}
+// Get pagenum
+$pagenum = $_GET['pagenum'];
+if($pagenum==""){
+$pagenum = 1;
+} elseif($pagenum<=0){
+$pagenum = 1;
+} else if($pagenum>=$page_cnt){
+$pagenum = $page_cnt;
+}
+$min = 1 + ($pagenum - 1) * $show;
+$max = $min + ($show - 1);
+// Get Tutoring list
+$sql = "select a2.* from ";
+$sql.= "(select @rownum := @rownum + 1 as rnum, a1.* from ";
+$sql.= "(select CST.*, TL.Chat_date, M.MemberName, M.MemberId, M.KaKaoId from chat_static_tutoring CST, Tutoring_list TL, MEMBER M ";
+$sql.= "where (M.MemberId like '%$search%' or M.MemberName like '%$search%' or M.KaKaoId like '%$search%') ";
+if($KaKaoId != "") $sql.= "and M.MemberId = '$KaKaoId' ";
+$sql.= "and TL.N_Student = M.num and CST.N_Tutoring_list = TL.N_Tutoring_list ";
+$sql.= "order by CST.N_CST desc) a1, (select @rownum := 0) TMP) a2 ";
+$sql.= "where a2.rnum >= $min and a2.rnum <= $max ";
+$sql.= ";";
+$result = mysql_query($sql, $dbconn) or die(mysql_error());
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>SB Admin 2 - Bootstrap Admin Theme</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="../bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- MetisMenu CSS -->
+    <link href="../bower_components/metisMenu/dist/metisMenu.min.css" rel="stylesheet">
+    <!-- Timeline CSS -->
+    <!-- Custom CSS -->
+    <link href="../dist/css/sb-admin-2.css" rel="stylesheet">
+    <!-- Morris Charts CSS -->
+
+    <!-- Custom Fonts -->
+    <link href="../bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <style>
+        body table {
+            font-size: 13px;
+        }
+
+        h3 {
+            text-align: left;
+            text-decoration: underline;
+        }
+
+        td {
+            padding: 0;
+        }
+    </style>
+    <script>
+        function dbupdate(){
+            var f = document.myform;
+            f.mode.value = "update";
+            $("form[name='myform']").submit();
+
+        }
+    </script>
+</head>
+<body>
+
+    <div id="wrapper">
+        <? include "../common/include/nav.html"; ?>
+        <!-- Navigation -->
+        <div id="page-wrapper">
+            <div class="row">
+                <div class="col-lg-12">
+                    <h1 class="page-header">챗로그통계</h1>
+                </div>
+                <!-- /.col-lg-12 -->
+            </div>
+            <!-- /.row -->
+            <div class="row">
+                <div class="col-lg-12">
+                    <form name="myform" method="get" action="./custom5.html">
+                                <div class="col-md-12 col-xs-12">
+                                    <div>
+                                        <input type="text" name="search" id="search" value="<?=$search?>" placeholder="Student Search" />
+                                        <button type="submit" class="btn btn-default btn-xs">조회</button>
+                                    </div>
+                                    <br />
+                                    <table class="table table-bordered table-condensed">
+                                        <thead>
+                                            <tr>
+                                                <th>No.</th>
+                                                <th>회원아이디</th>
+                                                <th>회원이름</th>
+                                                <th>Chat date</th>
+                                                <th>총 단어수(튜터)</th>
+                                                <th>총 단어수(튜티)</th>
+                                                <th>총 단어수(튜터)<br />중복제외</th>
+                                                <th>총 단어수(튜티)<br />중복제외</th>
+                                                <th>문장수(튜터)</th>
+                                                <th>문장수(튜티)</th>
+                                                <th>문장길이(튜터)<br />(총 단어수/문장수)</th>
+                                                <th>문장길이(튜티)<br />(총 단어수/문장수)</th>
+                                                <th>대화수(튜터)</th>
+                                                <th>대화수(튜티)</th>
+                                                <th>평균속도(튜터)</th>
+                                                <th>평균속도(튜티)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        <?
+                        $i = ($pagenum - 1) * $show;
+                        while($row = mysql_fetch_array($result)){
+                        $i++;
+                                            ?>
+                                            <tr>
+                                                <td><?=$i?></td>
+                                                <td><a href="custom5.html?kkd=<?=$row[MemberId]?>"><?=$row[MemberId]?></a></td>
+                                                <td><?=$row[MemberName]?></td>
+                                                <td><?=date_format(date_create($row[Chat_date]), 'Y-m-d')?></td>
+                                                <td><?=$row[Cnt_words_tutor]?></td>
+                                                <td><?=$row[Cnt_words_tutee]?></td>
+                                                <td><?=$row[Words_var_tutor]?></td>
+                                                <td><?=$row[Words_var_tutee]?></td>
+                                                <td><?=$row[Cnt_sentence_tutor]?></td>
+                                                <td><?=$row[Cnt_sentence_tutee]?></td>
+                                                <td><?=round($row[Sentence_length_tutor], 4)?></td>
+                                                <td><?=round($row[Sentence_length_tutee], 4)?></td>
+                                                <td><?=$row[Cnt_tutor]?></td>
+                                                <td><?=$row[Cnt_tutee]?></td>
+                                                <td><?=$row[Average_tutor]?></td>
+                                                <td><?=$row[Average_tutee]?></td>
+                                            </tr>
+                                            <? }?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <!--pagination-->
+                        <div style="text-align:center;">
+                            <ul class="pagination">
+                                <? if($pagenum<=1){     // pagenum가 1 이하?>
+                                <li class="pagination_button disabled"><a href="">Previous</a></li>
+                                <? } else{              // pagenum가 1 이하가 아닐 때?>
+                                <li class="pagination_button"><a href="custom5.html?kkd=<?=$KaKaoId?>&show=<?=$show?>&search=<?=$search?>&pagenum=<?=$pagenum-1?>">Previous</a></li>
+                                <? } ?>
+                                <?
+                    if($page_cnt <= 5){
+                        for($i=1; $i<=$page_cnt; $i++){
+                                ?>
+                                <li class="pagination_button1"><a href="custom5.html?kkd=<?=$KaKaoId?>&show=<?=$show?>&search=<?=$search?>&pagenum=<?=$i?>"><?=$i?></a></li>
+                                <?
+      }
+                    } else{
+                                ?>
+                                <li class="pagination_button1"><a href="custom5.html?kkd=<?=$KaKaoId?>&show=<?=$show?>&search=<?=$search?>&pagenum=1">1</a></li>
+
+                                <?
+                    if($pagenum<=4){     // pagenum가 4 이하일 때 5까지는 무조건 출력
+                        for($i=2; $i<=5; $i++){
+                                ?>
+                                <li class="pagination_button<?=$i?>"><a href="custom5.html?kkd=<?=$KaKaoId?>&show=<?=$show?>&search=<?=$search?>&pagenum=<?=$i?>"><?=$i?></a></li>
+                                <?  } ?>
+                                <li class="pagination_button disabled"><a href="">...</a></li>
+                                <?
+                     } else if($pagenum>4 && $pagenum <= $page_cnt-4){                // pagenum 5부터 마지막 페이지의 4 전까지
+                                ?>
+                                <li class="disabled"><a href="">...</a></li>
+                                <li class="pagination_button" id="pagination_button<?=$pagenum-1?>"><a href="custom5.html?kkd=<?=$KaKaoId?>&show=<?=$show?>&search=<?=$search?>&pagenum=<?=$pagenum-1?>"><?=$pagenum-1?></a></li>
+                                <li class="pagination_button" id="pagination_button<?=$pagenum?>"><a href="custom5.html?kkd=<?=$KaKaoId?>&show=<?=$show?>&search=<?=$search?>&pagenum=<?=$pagenum?>"><?=$pagenum?></a></li>
+                                <li class="pagination_button" id="pagination_button<?=$pagenum+1?>"><a href="custom5.html?kkd=<?=$KaKaoId?>&show=<?=$show?>&search=<?=$search?>&pagenum=<?=$pagenum+1?>"><?=$pagenum+1?></a></li>
+                                <li class="disabled"><a href="">...</a></li>
+                                <? } else{ ?>
+                                <li class="pagination_button disabled"><a href="">...</a></li>
+                                <?
+                        for($i=$page_cnt-4; $i<$page_cnt; $i++){
+                                ?>
+                                <li class="pagination_button" id="pagination_button<?=$i?>"><a href="custom5.html?kkd=<?=$KaKaoId?>&show=<?=$show?>&search=<?=$search?>&pagenum=<?=$i?>"><?=$i?></a></li>
+                                <?
+      }
+                    }
+                                ?>
+                                <li class="pagination_button" id="pagination_button<?=$page_cnt?>"><a href="custom5.html?kkd=<?=$KaKaoId?>&show=<?=$show?>&search=<?=$search?>&pagenum=<?=$page_cnt?>"><?=$page_cnt?></a></li>
+                                <? } ?>
+                                <? if($pagenum>=$page_cnt){ ?>
+                                <li class="pagination_button disabled"><a href="">Next</a></li>
+                                <? } else{ ?>
+                                <li class="pagination_button"><a href="custom5.html?kkd=<?=$KaKaoId?>&show=<?=$show?>&search=<?=$search?>&pagenum=<?=$pagenum+1?>">Next</a></li>
+                                <? } ?>
+                            </ul>
+                        </div>
+        <?
+                // 데이터베이스와의 접속 종료
+                mysql_close();
+                        ?>
+                    </form>
+                    <!-- /.row -->
+                </div>
+                <?
+                            $url = $_SERVER[PHP_SELF];
+                            $url_arr = explode("/", $url);
+                            $url = $url_arr[count($url_arr) - 1];
+                ?>
+                <div style="text-align: right; color: gray;">마지막수정: <?=date("Ymd H:i:s",filemtime($url))?></div>
+            </div>
+        <!-- /#page-wrapper -->
+
+    </div>
+    <!-- /#wrapper -->
+
+    <!-- jQuery -->
+    <script src="../bower_components/jquery/dist/jquery.min.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="../bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+
+    <!-- Metis Menu Plugin JavaScript -->
+    <script src="../bower_components/metisMenu/dist/metisMenu.min.js"></script>
+
+    
+
+    <!-- Custom Theme JavaScript -->
+    <script src="../dist/js/sb-admin-2.js"></script>
+
+</body>
+
+</html>

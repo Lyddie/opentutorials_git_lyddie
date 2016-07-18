@@ -1,0 +1,1034 @@
+﻿<?php
+include "{$_SERVER[DOCUMENT_ROOT]}/include/config.php";
+include "./session_admin.php";
+// post 메소드로 전달된 값 받아오기
+$schDate1 = $_REQUEST['schDate1'];
+$schDate2 = $_REQUEST['schDate2'];
+$sql5 = "select ";
+// 30분 텔라톡 선택날짜 신청자수(허수 포함)
+$sql5.= "(select count(*) from LYDDIE2 where ";
+if($schDate1 != ""){ $sql5.= "RegDate_f >= date_format('$schDate1', '%Y-%m-%d') and "; }
+if($schDate2 != ""){ $sql5.= "RegDate_f <= date_format('$schDate2', '%Y-%m-%d') and "; }
+$sql5.= "Class='B' and Repeatition = 0 and State=1) AS 'schcount1', ";
+// 30분 텔라톡 선택날짜 체험자수
+$sql5.= "(select count(*) from LYDDIE2 L inner join (select distinct Student from Tutoring_list where Content='11') TL ";
+$sql5.= "on L.KaKaoId = TL.Student where ";
+if($schDate1 != ""){ $sql5.= "L.RegDate_f >= date_format('$schDate1', '%Y-%m-%d') and "; }
+if($schDate2 != ""){ $sql5.= "L.RegDate_f <= date_format('$schDate2', '%Y-%m-%d') and "; }
+$sql5.= "L.Class='B' and L.Repeatition = 0 and L.State=1) AS 'schcount_real0', ";
+// 30분 텔라톡 선택날짜 진체험자수
+$sql5.= "(select count(*) from LYDDIE2 L inner join (select distinct Student from Tutoring_list where Content='11' and Cnt_tutee > 5) TL ";
+$sql5.= "on L.KaKaoId = TL.Student where ";
+if($schDate1 != ""){ $sql5.= "L.RegDate_f >= date_format('$schDate1', '%Y-%m-%d') and "; }
+if($schDate2 != ""){ $sql5.= "L.RegDate_f <= date_format('$schDate2', '%Y-%m-%d') and "; }
+$sql5.= "L.Class='B' and L.Repeatition = 0 and L.State=1) AS 'schcount_real1', ";
+// 30분 텔라톡 선택날짜 + 이후 결제자수
+$sql5.= "(select count(*) from LYDDIE2 L, (select M.KaKaoId AS 'KaKaoId', T.RegDate AS 'RegDate' ";
+$sql5.= "from MEMBER M, Tutoring T ";
+$sql5.= "where M.MemberId = T.MemberId and T.State=1) A ";
+$sql5.= "where L.KakaoId = A.KaKaoId and L.Class='B' and L.Repeatition = 0 and L.State=1 ";
+if($schDate1 != ""){ $sql5.= "and L.RegDate_f >= date_format('$schDate1', '%Y-%m-%d') "; }
+if($schDate2 != ""){ $sql5.= "and L.RegDate_f <= date_format('$schDate2', '%Y-%m-%d') "; }
+if($schDate1 != ""){ $sql5.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format('$schDate1', '%Y-%m-%d') "; }
+$sql5.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format(L.RegDate_f, '%Y-%m-%d')) as 'schcount2', ";
+// 60분 텔라톡 선택날짜 신청자수(허수 포함)
+$sql5.= "(select count(*) from LYDDIE2 where ";
+if($schDate1 != ""){ $sql5.= "RegDate_f >= date_format('$schDate1', '%Y-%m-%d') and "; }
+if($schDate2 != ""){ $sql5.= "RegDate_f <= date_format('$schDate2', '%Y-%m-%d') and "; }
+$sql5.= "Class='A' and Repeatition = 0 and State=1) AS 'schcount3', ";
+// 60분 텔라톡 선택날짜 진체험자수
+$sql5.= "(select count(*) from LYDDIE2 L inner join (select distinct Student from Tutoring_list where Content='11' and Cnt_tutee > 5) TL ";
+$sql5.= "on L.KaKaoId = TL.Student where ";
+if($schDate1 != ""){ $sql5.= "L.RegDate_f >= date_format('$schDate1', '%Y-%m-%d') and "; }
+if($schDate2 != ""){ $sql5.= "L.RegDate_f <= date_format('$schDate2', '%Y-%m-%d') and "; }
+$sql5.= "L.Class='A' and L.Repeatition = 0 and L.State=1) AS 'schcount_real3', ";
+// 60분 텔라톡 선택날짜 체험자수
+$sql5.= "(select count(*) from LYDDIE2 L inner join (select distinct Student from Tutoring_list where Content='11') TL ";
+$sql5.= "on L.KaKaoId = TL.Student where ";
+if($schDate1 != ""){ $sql5.= "L.RegDate_f >= date_format('$schDate1', '%Y-%m-%d') and "; }
+if($schDate2 != ""){ $sql5.= "L.RegDate_f <= date_format('$schDate2', '%Y-%m-%d') and "; }
+$sql5.= "L.Class='A' and L.Repeatition = 0 and L.State=1) AS 'schcount_real2', ";
+// 60분 텔라톡 선택날짜 + 이후 결제자수
+$sql5.= "(select count(*) from LYDDIE2 L, (select M.KaKaoId AS 'KaKaoId', T.RegDate AS 'RegDate' ";
+$sql5.= "from MEMBER M, Tutoring T ";
+$sql5.= "where M.MemberId = T.MemberId and T.State=1) A ";
+$sql5.= "where L.KakaoId = A.KaKaoId and L.Class='A' and L.Repeatition = 0 and L.State=1 ";
+if($schDate1 != ""){ $sql5.= "and L.RegDate_f >= date_format('$schDate1', '%Y-%m-%d') "; }
+if($schDate2 != ""){ $sql5.= "and L.RegDate_f <= date_format('$schDate2', '%Y-%m-%d') "; }
+if($schDate1 != ""){ $sql5.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format('$schDate1', '%Y-%m-%d') "; }
+$sql5.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format(L.RegDate_f, '%Y-%m-%d')) as 'schcount4', ";
+// 전체 텔라톡 선택날짜 신청자수(허수 포함)
+$sql5.= "(select count(*) from LYDDIE2 where ";
+if($schDate1 != ""){ $sql5.= "RegDate_f >= date_format('$schDate1', '%Y-%m-%d') and "; }
+if($schDate2 != ""){ $sql5.= "RegDate_f <= date_format('$schDate2', '%Y-%m-%d') and "; }
+$sql5.= "Repeatition = 0 and State=1) AS 'schcount5', ";
+// 전체 텔라톡 선택날짜 진체험자수
+$sql5.= "(select count(*) from LYDDIE2 L inner join (select distinct Student from Tutoring_list where Content='11' and Cnt_tutee > 5) TL ";
+$sql5.= "on L.KaKaoId = TL.Student where ";
+if($schDate1 != ""){ $sql5.= "L.RegDate_f >= date_format('$schDate1', '%Y-%m-%d') and "; }
+if($schDate2 != ""){ $sql5.= "L.RegDate_f <= date_format('$schDate2', '%Y-%m-%d') and "; }
+$sql5.= "L.Repeatition = 0 and L.State=1) AS 'schcount_real5', ";
+// 전체 텔라톡 선택날짜 + 이후 결제자수
+$sql5.= "(select count(*) from LYDDIE2 L, (select M.KaKaoId AS 'KaKaoId', T.RegDate AS 'RegDate' ";
+$sql5.= "from MEMBER M, Tutoring T ";
+$sql5.= "where M.MemberId = T.MemberId and T.State=1) A ";
+$sql5.= "where L.KakaoId = A.KaKaoId and L.Repeatition = 0 and L.State=1 ";
+if($schDate1 != ""){ $sql5.= "and L.RegDate_f >= date_format('$schDate1', '%Y-%m-%d') "; }
+if($schDate2 != ""){ $sql5.= "and L.RegDate_f <= date_format('$schDate2', '%Y-%m-%d') "; }
+if($schDate1 != ""){ $sql5.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format('$schDate1', '%Y-%m-%d') "; }
+$sql5.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format(L.RegDate_f, '%Y-%m-%d')) as 'schcount6', ";
+// 전체 텔라톡 선택날짜 무료30에서 60 전환수
+$sql5.= "(select count(*) from LYDDIE2 L, (select M.KaKaoId AS 'KaKaoId', T.RegDate AS 'RegDate' ";
+$sql5.= "from MEMBER M, Tutoring T ";
+$sql5.= "where M.MemberId = T.MemberId and (T.Ban like '%55분%' or T.Course like '%55분%') and T.State=1) A ";
+$sql5.= "where L.KakaoId = A.KaKaoId and L.Class='B' and L.Repeatition = 0 and L.State=1 ";
+if($schDate1 != ""){ $sql5.= "and L.RegDate_f >= date_format('$schDate1', '%Y-%m-%d') "; }
+if($schDate2 != ""){ $sql5.= "and L.RegDate_f <= date_format('$schDate2', '%Y-%m-%d') "; }
+if($schDate1 != ""){ $sql5.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format('$schDate1', '%Y-%m-%d') "; }
+$sql5.= "and DATE_FORMAT(A.RegDate, '%Y-%m-%d') >= DATE_FORMAT(L.RegDate_f, '%Y-%m-%d')) AS schcount7, ";
+// 전체 텔라톡 선택날짜 30분 텔라톡 신청자수
+$sql5.= "(select count(*) from LYDDIE2 where ";
+if($schDate1 != ""){ $sql5.= "RegDate_f >= date_format('$schDate1', '%Y-%m-%d') and "; }
+if($schDate2 != ""){ $sql5.= "RegDate_f <= date_format('$schDate2', '%Y-%m-%d') and "; }
+$sql5.= "Class='B' and Repeatition = 0 and State=1) AS 'schcount8', ";
+// 전체 텔라톡 선택날짜 무료60에서 30 전환수
+$sql5.= "(select count(*) from LYDDIE2 L, (select M.KaKaoId AS 'KaKaoId', T.RegDate AS 'RegDate' ";
+$sql5.= "from MEMBER M, Tutoring T ";
+$sql5.= "where M.MemberId = T.MemberId and (T.Ban like '%25분%' or T.Course like '%25분%') and T.State=1) A ";
+$sql5.= "where L.KakaoId = A.KaKaoId and L.Class='A' and L.Repeatition = 0 and L.State=1 ";
+if($schDate1 != ""){ $sql5.= "and L.RegDate_f >= date_format('$schDate1', '%Y-%m-%d') "; }
+if($schDate2 != ""){ $sql5.= "and L.RegDate_f <= date_format('$schDate2', '%Y-%m-%d') "; }
+if($schDate1 != ""){ $sql5.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format('$schDate1', '%Y-%m-%d') "; }
+$sql5.= "and DATE_FORMAT(A.RegDate, '%Y-%m-%d') >= DATE_FORMAT(L.RegDate_f, '%Y-%m-%d')) AS schcount9, ";
+// 전체 텔라톡 선택날짜 60분 텔라톡 신청자수
+$sql5.= "(select count(*) from LYDDIE2 where ";
+if($schDate1 != ""){ $sql5.= "RegDate_f >= date_format('$schDate1', '%Y-%m-%d') and "; }
+if($schDate2 != ""){ $sql5.= "RegDate_f <= date_format('$schDate2', '%Y-%m-%d') and "; }
+$sql5.= "Class='A' and Repeatition = 0 and State=1) AS 'schcount10', ";
+$sql5.= "(select count(*) from Tutoring where date_format(FinishDate, '%Y-%m-%d') >= date_format(now(), '%Y-%m-%d') and State=1) as nowuser, ";
+// trim
+$sql5 = trim($sql5, ", ");
+$sql5.= " from DUAL;";
+$result5 = mysql_query($sql5, $dbconn);
+$row5 = mysql_fetch_array($result5) or die(mysql_error());
+// 텔라톡 시간별/기간별 결제자수 cnt (talkcntrow)
+$term = array(1, 3, 6, 12);     // 개월수
+$sql = "select ";
+// 시간별 (talkcnt7~22)
+for($i=7; $i<=22; $i++){
+if($i<10){ $sql.= "(select count(*) from Tutoring where (BanTime like '0".$i."%' or BanTime = '".$i."시') and State=1) as talkcnt$i, "; }
+else { $sql.= "(select count(*) from Tutoring where (BanTime like '%$i%' or BanTime = '".$i."시' ) and State=1) as talkcnt$i, "; }
+}
+// 기간별 (termcnt0~3)
+for($i=0; $i<4; $i++){
+$sql.= "(select count(*) from Tutoring where (Term = '".$term[$i]."' or Term = '".$term[$i]."개월') and State=1) as termcnt$i, ";
+}
+// 신규 기간별 (termcnt0~3)
+for($i=0; $i<4; $i++){
+$sql.= "(select count(*) from Tutoring where (Term = '".$term[$i]."' or Term = '".$term[$i]."개월') and Repurchase = '0' and State=1) as termcntN$i, ";
+}
+// 재구매 기간별 (termcnt0~3)
+for($i=0; $i<4; $i++){
+$sql.= "(select count(*) from Tutoring where (Term = '".$term[$i]."' or Term = '".$term[$i]."개월') and Repurchase = '1' and State=1) as termcntR$i, ";
+}
+// 프로그램별 (progcnt1~26), 프로그램: prog1~26
+for($i=1; $i<=26; $i++){
+$sql.= "(select KR_Program from Program where N_Program = '$i') as prog$i, ";
+$sql.= "(select count(*) from Tutoring T inner join Program P on T.Course = P.KR_Program where P.N_Program = $i and T.State=1) as progcnt$i, ";
+}
+$sql = trim($sql, ", ");
+$sql.= " from dual;";
+$result = mysql_query($sql, $dbconn) or die(mysql_error());
+$talkcntrow = mysql_fetch_array($result);
+?>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>SB Admin 2 - Bootstrap Admin Theme</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="../bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- MetisMenu CSS -->
+    <link href="../bower_components/metisMenu/dist/metisMenu.min.css" rel="stylesheet">
+    <!-- Timeline CSS -->
+    <!-- Custom CSS -->
+    <link href="../dist/css/sb-admin-2.css" rel="stylesheet">
+    <!-- Morris Charts CSS -->
+
+    <!-- Custom Fonts -->
+    <link href="../bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <? include "../common/include/nav.html"; ?>
+        <!-- Navigation -->
+        <div id="page-wrapper">
+            <div class="row">
+                <div class="col-lg-12">
+                    <h1 class="page-header">결제통계</h1>
+                </div>
+                <!-- /.col-lg-12 -->
+            </div>
+            <!-- /.row -->
+            <div class="row">
+                <table width="100%">
+                    <colgroup>
+                        <col width="50%" />
+                        <col width="50%" />
+                    </colgroup>
+                    <tr>
+                        <td colspan="2">
+                            현재 이용자 수 = <?=
+ $row5['nowuser']
+                            ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px;">
+                            <div class="">
+                                <?
+                    $talkcnt_total = 0;
+                    for($i=7; $i<=22; $i++){ $talkcnt_total += $talkcntrow['talkcnt'.$i.'']; }
+                                ?>
+                                <h3>시간별 텔라톡 결제자(<?=$talkcnt_total?>)</h3>
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <?
+                                for($i=7; $i<=14; $i++) {
+                                if($i<10) { echo "<th>0".$i."</th>"; }
+                                else { echo "<th>".$i."</th>";}
+                                }
+                                            ?>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <?
+                                for($i=7; $i<=14; $i++) {
+                                echo "<td>".$talkcntrow['talkcnt'.$i.'']."</td>";
+                                }
+                                            ?>
+                                        </tr>
+                                    </tbody>
+                                    <thead>
+                                        <tr>
+                                            <?
+                                for($i=15; $i<=22; $i++) {
+                                echo "<th>".$i."</th>";
+                                }
+                                            ?>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <?
+                                for($i=15; $i<=22; $i++) {
+                                echo "<td>".$talkcntrow['talkcnt'.$i.'']."</td>";
+                                }
+                                            ?>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <?
+                    $termcnt_total = 0;
+                    for($i=0; $i<4; $i++){ $termcnt_total += $talkcntrow['termcnt'.$i.'']; }
+                    $termcntN_total = 0;
+                    for($i=0; $i<4; $i++){ $termcntN_total += $talkcntrow['termcntN'.$i.'']; }
+                    $termcntR_total = 0;
+                    for($i=0; $i<4; $i++){ $termcntR_total += $talkcntrow['termcntR'.$i.'']; }
+                                ?>
+                                <h3>기간별 텔라톡 결제자(<?=$termcnt_total?>)</h3>
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>구분</th>
+                                            <?
+                                for($i=0; $i<4; $i++) {
+                                echo "<th>".$term[$i]."개월</th>";
+                                }
+                                            ?>
+                                            <th>평균</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>전체</td>
+                                            <?
+                                for($i=0; $i<4; $i++) {
+                                echo "<td>".$talkcntrow['termcnt'.$i.'']."(". 100*round($talkcntrow['termcnt'.$i.'']/$termcnt_total, 4)."%)</td>";
+                                }
+                                            ?>
+                                            <td>
+                                                <?
+                                    echo round(($talkcntrow['termcnt0']*1+$talkcntrow['termcnt1']*3+$talkcntrow['termcnt2']*6+$talkcntrow['termcnt3']*12)/$termcnt_total,2)."개월" ;
+                                                ?>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>신규</td>
+                                            <?
+                                for($i=0; $i<4; $i++) {
+                                echo "<td>".$talkcntrow['termcntN'.$i.'']."(". 100*round($talkcntrow['termcntN'.$i.'']/$termcntN_total, 4)."%)</td>";
+                                }
+                                            ?>
+                                            <td>
+                                                <?
+                                    echo round(($talkcntrow['termcntN0']*1+$talkcntrow['termcntN1']*3+$talkcntrow['termcntN2']*6+$talkcntrow['termcntN3']*12)/$termcntN_total,2)."개월" ;
+                                                ?>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>재구매</td>
+                                            <?
+                                for($i=0; $i<4; $i++) {
+                                echo "<td>".$talkcntrow['termcntR'.$i.'']."(". 100*round($talkcntrow['termcntR'.$i.'']/$termcntR_total, 4)."%)</td>";
+                                }
+                                            ?>
+                                            <td>
+                                                <?
+                                    echo round(($talkcntrow['termcntR0']*1+$talkcntrow['termcntR1']*3+$talkcntrow['termcntR2']*6+$talkcntrow['termcntR3']*12)/$termcntR_total,2)."개월" ;
+                                                ?>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                        <td style="padding:10px;">
+                            <div class="">
+                                <?
+                    $progcnt_total = 0;
+                    for($i=1; $i<=13; $i++){ $progcnt_total += $talkcntrow['progcnt'.$i.'']; }
+                    for($i=24; $i<=26; $i++){ $progcnt_total += $talkcntrow['progcnt'.$i.'']; }
+                                ?>
+                                <h3>프로그램별 텔라톡 결제자(<?=$progcnt_total?>)</h3>
+                                <table class="table table-bordered">
+                                    <tbody>
+                                        <?
+                            for($i=1; $i<= 13; $i++){
+                            if($i%2 == 1){ echo "<tr>"; }
+                            echo "
+                            <td>".$talkcntrow['prog'.$i.'']."</td>
+                            <td>".$talkcntrow['progcnt'.$i.'']."</td>
+                            ";
+                            if($i%2 == 0){ echo "</tr>"; }
+                            }
+                            for($i=24; $i<= 26; $i++){
+                            if($i%2 == 1){ echo "<tr>"; }
+                            echo "
+                            <td>".$talkcntrow['prog'.$i.'']."</td>
+                            <td>".$talkcntrow['progcnt'.$i.'']."</td>
+                            ";
+                            if($i%2 == 0){ echo "</tr>"; }
+                            }
+                                        ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px;">
+                            <form name="myform30" method="post">
+                                <div class="">
+                                    <p><?$hoza[0] = $row['schcount_real0'];?></p>
+                                    <h3>30분 텔라톡</h3>
+                                    <table class="table table-bordered">
+                                        <?
+                            // Class와 date_add의 interval
+                            $class = array('B', 'A');
+                            $interval = array('interval -7 day', 'interval -1 month', 'interval -3 month');
+                            // 무료체험자 수
+                            $FreeTut30 = array();
+                            $FreeTut30_real = array();
+                            $FreeTut60 = array();
+                            $FreeTut60_real = array();
+                            $sql = "select ";
+                            for($i=0; $i<3; $i++){
+                            $sql.= "(select count(*) from LYDDIE2 where RegDate_f >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and RegDate_f <= date_format(now(), '%Y-%m-%d')";
+                            $sql.= "and Class='$class[0]' and Repeatition = 0 and State=1) AS 'count".($i+1)."', ";
+                            $sql.= "(select count(*) from LYDDIE2 L inner join (select distinct Student from Tutoring_list where Content='11' and Cnt_tutee > 5) TL ";
+                            $sql.= "on L.KaKaoId = TL.Student where L.RegDate_f >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and L.RegDate_f <= date_format(now(), '%Y-%m-%d')";
+                            $sql.= "and L.Class='$class[0]' and L.Repeatition = 0 and L.State=1 ) AS 'count_real".($i+1)."', ";
+                            $sql.= "(select count(*) from LYDDIE2 L inner join (select distinct Student from Tutoring_list where Content='11') TL ";
+                            $sql.= "on L.KaKaoId = TL.Student where L.RegDate_f >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and L.RegDate_f <= date_format(now(), '%Y-%m-%d')";
+                            $sql.= "and L.Class='$class[0]' and L.Repeatition = 0 and L.State=1 ) AS 'count_atd".($i+1)."', ";
+                            $sql.= "(select count(*) from LYDDIE2 where RegDate_f >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and RegDate_f <= date_format(now(), '%Y-%m-%d')";
+                            $sql.= "and Class='$class[1]' and Repeatition = 0 and State=1) AS 'count".($i+4)."', ";
+                            $sql.= "(select count(*) from LYDDIE2 L inner join (select distinct Student from Tutoring_list where Content='11' and Cnt_tutee > 5) TL ";
+                            $sql.= "on L.KaKaoId = TL.Student where L.RegDate_f >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and L.RegDate_f <= date_format(now(), '%Y-%m-%d')";
+                            $sql.= "and L.Class='$class[1]' and L.Repeatition = 0 and L.State=1 ) AS 'count_real".($i+4)."', ";
+                            $sql.= "(select count(*) from LYDDIE2 L inner join (select distinct Student from Tutoring_list where Content='11' ) TL ";
+                            $sql.= "on L.KaKaoId = TL.Student where L.RegDate_f >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and L.RegDate_f <= date_format(now(), '%Y-%m-%d')";
+                            $sql.= "and L.Class='$class[1]' and L.Repeatition = 0 and L.State=1 ) AS 'count_atd".($i+4)."', ";
+                            }
+                            $sql = trim($sql, ", ");
+                            $sql.= " from DUAL;";
+                            $result = mysql_query($sql, $dbconn);
+                            $row = mysql_fetch_array($result) or die(mysql_error());
+                            // 기간별 30분 신청자수(허수 포함)
+                            $FreeTut30[0] = $row['count1'];
+                            $FreeTut30[1] = $row['count2'];
+                            $FreeTut30[2] = $row['count3'];
+                            // 기간별 30분 체험자수
+                            $FreeTut30_atd[0] = $row['count_atd1'];
+                            $FreeTut30_atd[1] = $row['count_atd2'];
+                            $FreeTut30_atd[2] = $row['count_atd3'];
+                            // 기간별 30분 진체험자수
+                            $FreeTut30_real[0] = $row['count_real1'];
+                            $FreeTut30_real[1] = $row['count_real2'];
+                            $FreeTut30_real[2] = $row['count_real3'];
+                            // 기간별 60분 신청자수(허수 포함)
+                            $FreeTut60[0] = $row['count4'];
+                            $FreeTut60[1] = $row['count5'];
+                            $FreeTut60[2] = $row['count6'];
+                             // 기간별 60분 체험자수
+                            $FreeTut60_atd[0] = $row['count_atd4'];
+                            $FreeTut60_atd[1] = $row['count_atd5'];
+                            $FreeTut60_atd[2] = $row['count_atd6'];
+                            // 기간별 60분 진체험자수
+                            $FreeTut60_real[0] = $row['count_real4'];
+                            $FreeTut60_real[1] = $row['count_real5'];
+                            $FreeTut60_real[2] = $row['count_real6'];
+                            // 무료체험자 중 결제자 수
+                            $RealTut30 = array();
+                            $RealTut60 = array();
+                            $sql = "select ";
+                            for($i=0; $i<3; $i++){
+                            // 기간별 30분 결제자
+                            $sql.= "(select count(*) from LYDDIE2 L, (select M.KaKaoId AS 'KaKaoId', T.RegDate AS 'RegDate' ";
+                            $sql.= "from MEMBER M, Tutoring T ";
+                            $sql.= "where M.MemberId = T.MemberId and T.State=1) A ";
+                            $sql.= "where L.KaKaoId = A.KaKaoId and L.Class='$class[0]' and L.Repeatition = 0 and L.State=1 ";
+                            $sql.= "and L.RegDate_f >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and L.RegDate_f <= date_format(now(), '%Y-%m-%d') ";
+                            $sql.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and DATE_FORMAT(A.RegDate, '%Y-%m-%d') >= DATE_FORMAT(L.RegDate_f, '%Y-%m-%d')) AS count".($i+7).", ";
+                            // 기간별 60분 결제자
+                            $sql.= "(select count(*) from LYDDIE2 L, (select M.KaKaoId AS 'KaKaoId', T.RegDate AS 'RegDate' ";
+                            $sql.= "from MEMBER M, Tutoring T ";
+                            $sql.= "where M.MemberId = T.MemberId and T.State=1) A ";
+                            $sql.= "where L.KaKaoId = A.KaKaoId and L.Class='$class[1]' and L.Repeatition = 0 and L.State=1 ";
+                            $sql.= "and L.RegDate_f >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and L.RegDate_f <= date_format(now(), '%Y-%m-%d') ";
+                            $sql.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and DATE_FORMAT(A.RegDate, '%Y-%m-%d') >= DATE_FORMAT(L.RegDate_f, '%Y-%m-%d')) AS count".($i+10).", ";
+                            }
+                            $sql = trim($sql, ", ");
+                            $sql.= " from DUAL; ";
+                            $result = mysql_query($sql, $dbconn);
+                            $row = mysql_fetch_array($result) or die(mysql_error());
+                            // 기간별 30분 결제자수
+                            $RealTut30[0] = $row['count7'];
+                            $RealTut30[1] = $row['count8'];
+                            $RealTut30[2] = $row['count9'];
+                            // 기간별 60분 결제자수
+                            $RealTut60[0] = $row['count10'];
+                            $RealTut60[1] = $row['count11'];
+                            $RealTut60[2] = $row['count12'];
+                            // 전체 무료체험자, 결제자
+                            $FreeTut = array();
+                            $FreeTut_real = array();
+                            $ReatTut = array();
+                            $ReatTut_real = array();
+                            for ($i=0; $i<count($FreeTut30); $i++){
+                            $FreeTut[$i] = $FreeTut30[$i] + $FreeTut60[$i];
+                            $FreeTut_real[$i] = $FreeTut30_real[$i] + $FreeTut60_real[$i];
+                            $RealTut[$i] = $RealTut30[$i] + $RealTut60[$i];
+                            $RealTut_real[$i] = $RealTut30_real[$i] + $RealTut60_real[$i];
+                            }
+                            // 전환수(변수명 확인)
+                            $RealTut30to60 = array();
+                            $RealTut60to30 = array();
+                            $sql = "select ";
+                            for($i=0; $i<3; $i++){
+                            // 30분에서 60분 전환수
+                            $sql.= "(select count(*) from LYDDIE2 L, (select M.KaKaoId AS 'KaKaoId', T.RegDate AS 'RegDate' ";
+                            $sql.= "from MEMBER M, Tutoring T ";
+                            $sql.= "where M.MemberId = T.MemberId and (T.Ban like '%55분%' or T.Course like '%55분%') and T.State=1) A ";
+                            $sql.= "where L.KaKaoId = A.KaKaoId and L.Class='$class[0]' and L.Repeatition = 0 and L.State=1 ";
+                            $sql.= "and L.RegDate_f >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and L.RegDate_f <= date_format(now(), '%Y-%m-%d') ";
+                            $sql.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and DATE_FORMAT(A.RegDate, '%Y-%m-%d') >= DATE_FORMAT(L.RegDate_f, '%Y-%m-%d')) AS count".($i+13).", ";
+                            // 60분에서 30분 전환수
+                            $sql.= "(select count(*) from LYDDIE2 L, (select M.KaKaoId AS 'KaKaoId', T.RegDate AS 'RegDate' ";
+                            $sql.= "from MEMBER M, Tutoring T ";
+                            $sql.= "where M.MemberId = T.MemberId and (T.Ban like '%25분%' or T.Course like '%25분%') and T.State=1) A ";
+                            $sql.= "where L.KaKaoId = A.KaKaoId and L.Class='$class[1]' and L.Repeatition = 0 and L.State=1 ";
+                            $sql.= "and L.RegDate_f >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and L.RegDate_f <= date_format(now(), '%Y-%m-%d') ";
+                            $sql.= "and date_format(A.RegDate, '%Y-%m-%d') >= date_format(date_add(now(), $interval[$i]), '%Y-%m-%d') ";
+                            $sql.= "and DATE_FORMAT(A.RegDate, '%Y-%m-%d') >= DATE_FORMAT(L.RegDate_f, '%Y-%m-%d')) AS count".($i+16).", ";
+                            }
+                            $sql = trim($sql, ", ");
+                            $sql.= " from DUAL; ";
+                            $result = mysql_query($sql, $dbconn);
+                            $row = mysql_fetch_array($result) or die(mysql_error());
+                            $RealTut30to60[0] = $row['count13'];
+                            $RealTut30to60[1] = $row['count14'];
+                            $RealTut30to60[2] = $row['count15'];
+                            $RealTut60to30[0] = $row['count16'];
+                            $RealTut60to30[1] = $row['count17'];
+                            $RealTut60to30[2] = $row['count18'];
+                                        ?>
+                                        <thead>
+                                            <tr>
+                                                <th>날짜</th>
+                                                <th>신청자수</th>
+                                                <th>체험자수</th>
+                                                <th>진체험자수</th>
+                                                <th>결제자수</th>
+                                                <th>결제율</th>
+                                                <th>실결제율</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>최근 일주일</td>
+                                                <td><?=$FreeTut30[0]?></td>
+                                                <td><?=$FreeTut30_atd[0]?></td>
+                                                <td><?=$FreeTut30_real[0]?></td>
+                                                <td><?=$RealTut30[0]?></td>
+                                                <td><?=round(100 * $RealTut30[0]/$FreeTut30[0], 2)?>%</td>
+                                                <?if($FreeTut30_real[0]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut30[0]/$FreeTut30_real[0], 2)?>%</td>
+                                                <?}?>
+                                            </tr>
+                                            <tr>
+                                                <td>최근 한달</td>
+                                                <td><?=$FreeTut30[1]?></td>
+                                                <td><?=$FreeTut30_atd[1]?></td>
+                                                <td><?=$FreeTut30_real[1]?></td>
+                                                <td><?=$RealTut30[1]?></td>
+                                                <td><?=round(100 * $RealTut30[1]/$FreeTut30[1], 2)?>%</td>
+                                                <?if($FreeTut30_real[0]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut30[1]/$FreeTut30_real[1], 2)?>%</td>
+                                                <?}?>
+                                            </tr>
+                                            <tr>
+                                                <td>최근 3개월</td>
+                                                <td><?=$FreeTut30[2]?></td>
+                                                <td><?=$FreeTut30_atd[2]?></td>
+                                                <td><?=$FreeTut30_real[2]?></td>
+                                                <td><?=$RealTut30[2]?></td>
+                                                <td><?=round(100 * $RealTut30[2]/$FreeTut30[2], 2)?>%</td>
+                                                <?if($FreeTut30_real[0]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut30[2]/$FreeTut30_real[2], 2)?>%</td>
+                                                <?}?>
+                                            </tr>
+
+                                            <tr>
+                                                <td><input type="date" value="<?=$schDate1?>" name="schDate1"> ~ <input type="date" value="<?=$schDate2?>" name="schDate2"></td>
+                                                <td><?=$row5[schcount1]?></td>
+                                                <td><?=$row5[schcount_real0]?></td>
+                                                <td><?=$row5[schcount_real1]?></td>
+                                                <td><?=$row5[schcount2]?></td>
+                                                <?
+                                    if($row5[schcount1] == 0) {
+                                    echo "<td>0%</td>";
+                                    } else {
+                                                ?>
+                                                <td><?=round(100 * $row5[schcount2]/$row5[schcount1], 2)?>%</td>
+                                                <?
+                                    }
+                                    if($row5[schcount_real1] == 0) {
+                                    echo "<td>0%</td>";
+                                    } else {
+                                                ?>
+                                                <td><?=round(100 * $row5[schcount2]/$row5[schcount_real1], 2)?>%</td>
+                                                <? } ?>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div style="text-align:right;"><button type="submit" class="btn btn-default btn-sm">조회</button></div>
+                                </div>
+                            </form>
+                        </td>
+                        <td>
+                            <form name="myform60" method="post">
+                                <div>
+                                    <h3>60분 텔라톡</h3>
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>날짜</th>
+                                                <th>신청자수</th>
+                                                <th>체험자수</th>
+                                                <th>진체험자수</th>
+                                                <th>결제자수</th>
+                                                <th>결제율</th>
+                                                <th>실결제율</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>최근 일주일</td>
+                                                <td><?=$FreeTut60[0]?></td>
+                                                <td><?=$FreeTut60_atd[0]?></td>
+                                                <td><?=$FreeTut60_real[0]?></td>
+                                                <td><?=$RealTut60[0]?></td>
+                                                <td><?if($FreeTut60[0] == 0) echo 0; else echo round(100 * $RealTut60[0]/$FreeTut60[0], 2);?>%</td>
+                                                <?if($FreeTut60_real[0]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><? if($FreeTut60_real[0] == 0) echo 0; else echo round(100 * $RealTut60[0]/$FreeTut60_real[0], 2);?>%</td>
+                                                <?}?>
+                                            </tr>
+                                            <tr>
+                                                <td>최근 한달</td>
+                                                <td><?=$FreeTut60[1]?></td>
+                                                <td><?=$FreeTut60_atd[1]?></td>
+                                                <td><?=$FreeTut60_real[1]?></td>
+                                                <td><?=$RealTut60[1]?></td>
+                                                <td><?if($FreeTut60[1] == 0) echo 0; else echo round(100 * $RealTut60[1]/$FreeTut60[1], 2);?>%</td>
+                                                <?if($FreeTut60_real[0]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?if($FreeTut60_real[1] == 0) echo 0; else echo round(100 * $RealTut60[1]/$FreeTut60_real[1], 2);?>%</td>
+                                                <?}?>
+                                            </tr>
+                                            <tr>
+                                                <td>최근 3개월</td>
+                                                <td><?=$FreeTut60[2]?></td>
+                                                <td><?=$FreeTut60_atd[2]?></td>
+                                                <td><?=$FreeTut60_real[2]?></td>
+                                                <td><?=$RealTut60[2]?></td>
+                                                <td><?if($FreeTut60[2] == 0) echo 0; else echo round(100 * $RealTut60[2]/$FreeTut60[2], 2);?>%</td>
+                                                <?if($FreeTut60_real[0]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?if($FreeTut60_real[2] == 0) echo 0; else echo round(100 * $RealTut60[2]/$FreeTut60_real[2], 2);?>%</td>
+                                                <?}?>
+                                            </tr>
+                                            <tr>
+                                                <td><input type="date" value="<?=$schDate1?>" name="schDate1"> ~ <input type="date" value="<?=$schDate2?>" name="schDate2"></td>
+                                                <td><?=$row5[schcount3]?></td>
+                                                <td><?=$row5[schcount_real2]?></td>
+                                                <td><?=$row5[schcount_real3]?></td>
+                                                <td><?=$row5[schcount4]?></td>
+                                                <?
+                                    if($row5[schcount3] == 0){
+                                    echo "<td>0%</td>";
+                                    } else {
+                                                ?>
+                                                <td><?=round(100 * $row5[schcount4]/$row5[schcount3], 2)?>%</td>
+                                                <?
+                                    }
+                                    if($row5[schcount_real3] == 0){
+                                    echo "<td>0%</td>";
+                                    } else {
+                                                ?>
+                                                <td><?=round(100 * $row5[schcount4]/$row5[schcount_real3], 2)?>%</td>
+                                                <? } ?>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div style="text-align:right;"><button type="submit" class="btn btn-default btn-sm">조회</button></div>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px;" colspan="2">
+                            <form name="myform" method="post">
+                                <div class="col-md-12">
+                                    <h3>전체</h3>
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>날짜</th>
+                                                <th>신청자수</th>
+                                                <th>진체험자수</th>
+                                                <th>결제자수</th>
+                                                <th>결제율</th>
+                                                <th>실결제율</th>
+                                                <th>무료30->정식60 전환수</th>
+                                                <th>(무료30->정식60 전환수)/무료30분 수</th>
+                                                <th>무료60->정식30 전환수</th>
+                                                <th>(무료60->정식30 전환수)/무료60분 수</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>최근 일주일</td>
+                                                <td><?=$FreeTut[0]?></td>
+                                                <td><?=$FreeTut_real[0]?></td>
+                                                <td><?=$RealTut[0]?></td>
+                                                <?if($FreeTut[0]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut[0]/$FreeTut[0], 2)?>%</td>
+                                                <?}?>
+                                                <?if($FreeTut_real[0]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut[0]/$FreeTut_real[0], 2)?>%</td>
+                                                <?}?>
+                                                <td><?=$FreeTut30[0]?></td>
+                                                <?if($FreeTut_real[0]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut30to60[0]/$FreeTut30[0], 2)?>%</td>
+                                                <?}?>
+                                                <td><?=$RealTut60to30[0]?></td>
+                                                <?if($FreeTut60[0]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut60to30[0]/$FreeTut60[0], 2)?>%</td>
+                                                <?}?>
+                                            </tr>
+                                            <tr>
+                                                <td>최근 한달</td>
+                                                <td><?=$FreeTut[1]?></td>
+                                                <td><?=$FreeTut_real[1]?></td>
+                                                <td><?=$RealTut[1]?></td>
+                                                <?if($FreeTut[1]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut[1]/$FreeTut[1], 2)?>%</td>
+                                                <?}?>
+                                                <?if($FreeTut_real[1]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut[1]/$FreeTut_real[1], 2)?>%</td>
+                                                <?}?>
+                                                <td><?=$RealTut30to60[1]?></td>
+                                                <?if($FreeTut30[1]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut30to60[1]/$FreeTut30[1], 2)?>%</td>
+                                                <?}?>
+                                                <td><?=$RealTut60to30[1]?></td>
+                                                <?if($FreeTut60[1]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut60to30[1]/$FreeTut60[1], 2)?>%</td>
+                                                <?}?>
+                                            </tr>
+                                            <tr>
+                                                <td>최근 3개월</td>
+                                                <td><?=$FreeTut[2]?></td>
+                                                <td><?=$FreeTut_real[2]?></td>
+                                                <td><?=$RealTut[2]?></td>
+                                                <?if($FreeTut[2]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut[2]/$FreeTut[2], 2)?>%</td>
+                                                <?}?>
+                                                <?if($FreeTut_real[2]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut[2]/$FreeTut_real[2], 2)?>%</td>
+                                                <?}?>
+                                                <td><?=$RealTut30to60[2]?></td>
+                                                <?if($FreeTut30[2]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut30to60[2]/$FreeTut30[2], 2)?>%</td>
+                                                <?}?>
+                                                <td><?=$RealTut60to30[2]?></td>
+                                                <?if($FreeTut60[2]==0){?>
+                                                <td>0%</td>
+                                                <?}else{?>
+                                                <td><?=round(100 * $RealTut60to30[2]/$FreeTut60[2], 2)?>%</td>
+                                                <?}?>
+                                            </tr>
+                                            <tr>
+                                                <td><input type="date" value="<?=$schDate1?>" name="schDate1"> ~ <input type="date" value="<?=$schDate2?>" name="schDate2"></td>
+                                                <td><?=$row5[schcount5]?></td>
+                                                <td><?=$row5[schcount_real5]?></td>
+                                                <td><?=$row5[schcount6]?></td>
+                                                <?
+                                    if($row5[schcount5] == 0){
+                                    echo "<td>0%</td>";
+                                    } else {
+                                                ?>
+                                                <td><?=round(100 * $row5[schcount6]/$row5[schcount5], 2)?>%</td>
+                                                <?
+                                    }
+                                    if($row5[schcount_real5] == 0){
+                                    echo "<td>0%</td>";
+                                    } else {
+                                                ?>
+                                                <td><?=round(100 * $row5[schcount6]/$row5[schcount_real5], 2)?>%</td>
+                                                <? } ?>
+                                                <td><?=$row5[schcount7]?></td>
+                                                <?
+                                    if($row5[schcount8] == 0){
+                                    echo "<td>0%</td>";
+                                    } else {
+                                                ?>
+                                                <td><?=round(100 * $row5[schcount7]/$row5[schcount8], 2)?>%</td>
+                                                <? } ?>
+                                                <td><?=$row5[schcount9]?></td>
+                                                <?
+                                    if($row5[schcount10] == 0){
+                                    echo "<td>0%</td>";
+                                    } else {
+                                                ?>
+                                                <td><?=round(100 * $row5[schcount9]/$row5[schcount10], 2)?>%</td>
+                                                <? } ?>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div style="text-align:right;"><button type="submit" class="btn btn-default btn-sm">조회</button></div>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px;" colspan="2">
+                            <div class="col-md-12">
+                                <?
+                    // 9월부터 현재까지 날짜 차이 계산
+                    $fromSep = date_create("2015-09-01");
+                    $now = date_create(date("Y-m-d"));
+                    $diff = date_diff($fromSep, $now);
+                    $diffnum = (int)$diff->format("%m");
+                    // 시작날짜
+                    $yearstr = 2015;
+                    $monthstr = 9;
+                    // query for 1-month re-purchase rate
+                    $sql = "select ";
+                    for($i=0; $i<=$diffnum; $i++){
+                    // 종료달에 재구매자
+                    $sql.= "(select count(*) from Tutoring A inner join Tutoring B on A.MemberId = B.MemberId ";
+                    $sql.= "where A.RegDate > B.RegDate and date_format(A.RegDate, '%Y-%m') = date_format('$yearstr-$monthstr-00', '%Y-%m') ";
+                    $sql.= "and A.State=1 and B.State=1 ";
+                    $sql.= "and date_format(A.RegDate, '%Y-%m') = date_format(B.FinishDate, '%Y-%m')) as month".$yearstr.$monthstr.", ";  // count column name ex: month20159 month201510
+                    // 종료달 이후(종료달 포함) 재구매자
+                    $sql.= "(select count(*) from Tutoring A inner join Tutoring B on A.MemberId = B.MemberId ";
+                    $sql.= "where A.RegDate > B.RegDate and date_format(B.FinishDate, '%Y-%m') = date_format('$yearstr-$monthstr-00', '%Y-%m') ";
+                    $sql.= "and date_format(A.RegDate, '%Y-%m') >= date_format('$yearstr-$monthstr-00', '%Y-%m') ";
+                    $sql.= "and A.State=1 and B.State=1";
+                    $sql.= ") as monthaft".$yearstr.$monthstr.",";
+                    // 해당월에 종료된 구매자
+                    $sql.= "(select count(*) from Tutoring where date_format(FinishDate, '%Y-%m') = date_format('$yearstr-$monthstr-00', '%Y-%m') ";
+                    $sql.= "and State=1";
+                    $sql.= ") as monthfin".$yearstr.$monthstr.", ";
+                    // year/month ++
+                    $monthstr++;
+                    // month = 13 --> month = 1; year ++
+                    if($monthstr==13){
+                    $yearstr++;
+                    $monthstr = 1;
+                    }
+                    }
+                    $sql = trim($sql, ", ");
+                    $sql.= " from dual; ";
+                    $result = mysql_query($sql, $dbconn);
+                    $row = mysql_fetch_array($result) or die(mysql_error());
+                                ?>
+                                <h3>1-month re-purchase rate</h3>
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+<?
+                                            // 시작날짜
+                                            $yearstr = 15;
+                                            $monthstr = 9;
+                                            // query for 1-month re-purchase rate
+                                            $sql = "select ";
+                                            for($i=0; $i<=$diffnum; $i++){
+                                                echo "<th>".$monthstr."월 ".$yearstr."'</th>";
+                                                // year/month ++
+                                                $monthstr++;
+                                                // month = 13 --> month = 1; year ++
+                                                if($monthstr==13){
+                                                    $yearstr++;
+                                                    $monthstr = 1;
+                                                }
+                                            }
+                                            ?>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>재구매율(동월)</td>
+                                            <?
+                                            // 시작날짜
+                                            $yearstr = 2015;
+                                            $monthstr = 9;
+                                            // query for 1-month re-purchase rate
+                                            $sql = "select ";
+                                            for($i=0; $i<=$diffnum; $i++){
+                                                echo "
+                                                <td>".$row[month.$yearstr.$monthstr]." / ".$row[monthfin.$yearstr.$monthstr]." = ".round($row[month.$yearstr.$monthstr]/$row[monthfin.$yearstr.$monthstr], 4)."</td>";
+                                                // year/month ++
+                                                $monthstr++;
+                                                // month = 13 --> month = 1; year ++
+                                                if($monthstr==13){
+                                                    $yearstr++;
+                                                    $monthstr = 1;
+                                                }
+                                            }
+?>
+                                        </tr>
+
+                                        <tr>
+                                            <td>재구매율</td>
+                                            <?
+                                            // 시작날짜
+                                            $yearstr = 2015;
+                                            $monthstr = 9;
+                                            // query for 1-month re-purchase rate
+                                            $sql = "select ";
+                                            for($i=0; $i<=$diffnum; $i++){
+                                                echo "
+                                                <td>".$row[monthaft.$yearstr.$monthstr]
+                                                            ?> / <?=$row[monthfin.$yearstr.$monthstr]?> = <?=
+                                                round($row[monthaft.$yearstr.$monthstr]/$row[monthfin.$yearstr.$monthstr], 4)."</td>";
+                                                // year/month ++
+                                                $monthstr++;
+                                                // month = 13 --> month = 1; year ++
+                                                if($monthstr==13){
+                                                    $yearstr++;
+                                                    $monthstr = 1;
+                                                }
+                                            }
+                                            ?>
+                                        </tr>
+
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px;" colspan="2">
+                            <div class="">
+
+
+
+
+                                <?
+                echo "<script>
+                    var diffmon = $diffnum;
+                    </script>";
+                // php --> js 기간별 결제자수
+                $talkcnt = "[";
+                for($i=7; $i<=22; $i++){
+                    $talkcnt.= "'".$talkcntrow['talkcnt'.$i.'']."', ";
+                }
+                $talkcnt = trim($talkcnt, ", ");
+                $talkcnt.= "]";
+                echo "<script>
+                    var talkcnt = new Array();
+                    talkcnt = $talkcnt;
+                </script>";
+                // php --> js 재구매율
+                $yearstr = 2015;
+                $monthstr = 9;
+                // 재구매율(동월) 문자열
+                $repurchase1 = "[";
+                // 재구매율 문자열
+                $repurchase2 = "[";
+                for($i=0; $i<=$diffnum; $i++){
+                    $repurchase1.= "'".round($row['month'.$yearstr.$monthstr]/$row['monthfin'.$yearstr.$monthstr], 4)."', ";
+                    $repurchase2.= "'".round($row['monthaft'.$yearstr.$monthstr]/$row['monthfin'.$yearstr.$monthstr], 4)."', ";
+                    // year/month ++
+                    $monthstr++;
+                    // month = 13 --> month = 1; year ++
+                    if($monthstr==13){
+                        $yearstr++;
+                        $monthstr = 1;
+                    }
+                }
+                $repurchase1 = trim($repurchase1, ", ");
+                $repurchase2 = trim($repurchase2, ", ");
+                $repurchase1.= "]";
+                $repurchase2.= "]";
+                echo "<script>
+                    var repurchase1 = new Array();
+                    var repurchase2 = new Array();
+                    repurchase1 = $repurchase1;
+                    repurchase2 = $repurchase2;
+                </script>";
+                                ?>
+                                <div id="chart_time" class="col-md-6 col-xs-12"></div>
+                                <div id="chart_repurchase" class="col-md-6 col-xs-12"></div>
+                                <div id="chart_div"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <?
+                        $url = $_SERVER[PHP_SELF];
+                        $url_arr = explode("/", $url);
+                        $url = $url_arr[count($url_arr) - 1];
+                ?>
+                <div style="text-align: right; color: gray;">마지막수정: <?=date("Ymd H:i:s",filemtime($url))?></div>
+                <?
+                // 데이터베이스와의 접속 종료
+                mysql_close();
+                ?>
+                <script type="text/javascript" src="js/chart.js" charset="utf-8"></script>
+            </div>
+            <!-- /.row -->           
+        </div>
+        <!-- /#page-wrapper -->
+
+    </div>
+    <!-- /#wrapper -->
+
+    <!-- jQuery -->
+    <script src="../bower_components/jquery/dist/jquery.min.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="../bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+
+    <!-- Metis Menu Plugin JavaScript -->
+    <script src="../bower_components/metisMenu/dist/metisMenu.min.js"></script>
+
+    <script>
+        function dbupdate(){
+            var f = document.myform;
+            f.mode.value = "update";
+            $("form[name='myform']").submit();
+
+        }
+    </script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="../dist/js/sb-admin-2.js"></script>
+
+</body>
+
+</html>

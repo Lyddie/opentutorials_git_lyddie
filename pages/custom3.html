@@ -1,0 +1,217 @@
+﻿<?
+include "{$_SERVER[DOCUMENT_ROOT]}/include/config.php";
+include "./session_admin.php";
+
+$mode = $_REQUEST['mode'];
+if($mode=="delete"){
+    $chk_idx=$_REQUEST['chk'];
+    for($i=0; $i<count($chk_idx); $i++){
+        $sql = 'update `LYDDIE2` set `State`=2 ';
+        $sql.= 'where `idx`='.$chk_idx[$i].';';
+        $result=mysql_query($sql, $dbconn);
+        $sql = 'update `LYDDIE1` ';
+        $sql.= 'set `RealNum`=(`RealNum`-1), ';
+        $sql.= '`Rest`=CASE WHEN `Capa`>`RealNum` THEN (`Capa`-`RealNum`) ELSE 0 END, ';
+        $sql.= '`Avail`=CASE WHEN `Rest`>0 THEN \'y\' ELSE \'n\' END ';
+        $sql.= 'where `RegDate_f`=(select `RegDate_f` from `LYDDIE2` where `idx`='.$chk_idx[$i].') ';
+        $sql.= 'and `Class`=(select `Class` from `LYDDIE2` where `idx`='.$chk_idx[$i].') ';
+        $sql.= 'and `ApplyTime`=(select TIME_FORMAT((select `ApplyTime` from `LYDDIE2` ';
+        $sql.= 'where `idx`='.$chk_idx[$i].'), \'%k:%i\')); ';
+        $result=mysql_query($sql, $dbconn);
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>SB Admin 2 - Bootstrap Admin Theme</title>
+    <!-- Bootstrap Core CSS -->
+    <link href="../bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- MetisMenu CSS -->
+    <link href="../bower_components/metisMenu/dist/metisMenu.min.css" rel="stylesheet">
+    <!-- Timeline CSS -->
+    <!-- Custom CSS -->
+    <link href="../dist/css/sb-admin-2.css" rel="stylesheet">
+    <!-- Morris Charts CSS -->
+    <!-- Custom Fonts -->
+    <link href="../bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <style>
+        h3 {
+            text-align: right;
+            text-decoration: underline;
+        }
+
+        td.capa_col {
+            padding: 0;
+            width: 120px;
+        }
+
+        input.capa_input {
+            margin: 0 auto;
+            border-style: hidden;
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div id="wrapper">
+        <? include "../common/include/nav.html"; ?>
+        <!-- Navigation -->
+        <div id="page-wrapper">
+            <div class="row">
+                <div class="col-lg-12">
+                    <h1 class="page-header">등록일순</h1>
+                </div>
+                <!-- /.col-lg-12 -->
+                <div class="col-lg-12">
+                    <div class="row">
+                        <div class="col-lg-3">
+                            <form action="custom3.html?mode=student" method='post'>
+                                <?
+                            $start_date = $_REQUEST["s_start_date"];
+                            $class = $_REQUEST["s_category"];
+                            if($start_date==""){
+                                $start_date = date("Y-m-d");
+                            } else if($start_date==null){
+                                $start_date = date("Y-m-d");
+                            }
+                            $sql_date = "AND DATE_FORMAT(Today, '%Y-%m-%d')=DATE_FORMAT('$start_date', '%Y-%m-%d')";
+                            $sql_class = "AND Class LIKE '%$class%'";
+                                ?>
+                                <div id="student_query" class="">
+                                    <input id="s_start_date" name="s_start_date" type="date" value="<?=$start_date?>" />
+                                    <select id="s_category" name="s_category">
+                                        <option value="">전체</option>
+                                        <option value="A" <? if($class == "A"){?> selected <? } ?>>1시간(A)</option>
+                                        <option value="B" <? if($class == "B"){?> selected <? } ?>>30분(B)</option>
+                                    </select>
+                                    <input type="submit" class="btn btn-default btn-sm" value="search">
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-lg-3 col-lg-offset-6">
+                            <form action="custom3.html" method='post'>
+                                <input type="hidden" name="s_start_date" value="none" />
+                                <div class="w3-col m6 w3-yellow" style="text-align: right;">
+                                    <button type="button" class="btn btn-default btn-sm" onclick="openModal(-1)">체험자등록</button>
+                                    <input type="submit" class="btn btn-warning btn-sm" value="전체조회">
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-12">
+                    <form action="custom3.html?mode=delete" method="post">
+                        <div style=" margin-top: 5px; margin-bottom: 5px;">
+                            <input type="submit" class="btn btn-danger btn-xs" value="삭제">
+                        </div>
+                        <table class="table table-bordered table-condensed">
+                            <colgroup>
+                                <col width="20px">
+                                <col width="60px">
+                                <col width="100px">
+                                <col width="150px">
+                                <col width="150px">
+                                <col width="150px">
+                                <col width="80px">
+                                <col width="60px">
+                                <col width="100px">
+                                <col width="150px">
+                                <col width="150px">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <td><input type="checkbox" disabled></td>
+                                    <th>번호</th>
+                                    <th>이름</th>
+                                    <th>카톡ID</th>
+                                    <th>연락처</th>
+                                    <th>체험일</th>
+                                    <th>시간</th>
+                                    <th>분류</th>
+                                    <th>경로</th>
+                                    <th>최초경로</th>
+                                    <th>등록일</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?
+                $sql = "SELECT * FROM LYDDIE2
+                        WHERE State=1
+                            $sql_date
+                            $sql_class
+                        ORDER BY
+                            idx
+                       ;";
+                $result=mysql_query($sql, $dbconn);
+                // 데이터베이스 데이터 출력 시작
+                $i = 0;
+                while($row=mysql_fetch_array($result))
+                {
+                    $i++;
+                    $sql2 = "select count(KakaoId) from LYDDIE2 where KakaoId='$row[KakaoId]' and State=1;";
+                    $over = mysql_query($sql2, $dbconn);
+                    $count = mysql_result($over, 0, 0);
+                    if($count > 1){
+                                ?>
+                                <tr style='color:red'>
+                                    <? } else{ ?>
+                                <tr>
+                                    <?}?>
+                                    <td><input type="checkbox" name="chk[]" value="<?=$row[idx]?>"></td>
+                                    <td><?=$i?></td>
+                                    <td><?=$row[StuName]?></td>
+                                    <td><a href="#" onclick="openModal(<?=$row[idx]?>, '<?=$row[StuName]?>', '<?=$row[KakaoId]?>', '<?=$row[PhoneNo]?>', '<?=$row[RegDate_f]?>', '<?=$row["Class"]?>', '<?=substr($row[ApplyTime], 0, -3)?>')"><?=$row[KakaoId]?></a></td>
+                                    <td><?=$row[PhoneNo]?></td>
+                                    <td><?=$row[RegDate_f]?></td>
+                                    <td><?=substr($row[ApplyTime], 0, -3)?></td>
+                                    <td><?=$row["Class"]?></td>
+                                    <td><?=$row[Path]?>(<?=$row[Purpose]?>)</td>
+                                    <td><?=$row[Path_tll]?></td>
+                                    <td><?=date("Y-m-d", strtotime($row[Today]))?></td>
+                                </tr>
+                                <?}?>
+                            </tbody>
+                        </table>
+                        <?include "./stu_info.html";?>
+                    </form>
+                </div>
+            </div>
+            <!-- /.row -->           
+            <?
+                            $url = $_SERVER[PHP_SELF];
+                            $url_arr = explode("/", $url);
+                            $url = $url_arr[count($url_arr) - 1];
+            ?>
+            <div style="text-align: right; color: gray;">마지막수정: <?=date("Ymd H:i:s",filemtime($url))?></div>
+            <?
+                // 데이터베이스와의 접속 종료
+                mysql_close();
+            ?>
+        </div>
+        <!-- /#page-wrapper -->
+    </div>
+    <!-- /#wrapper -->
+    <!-- jQuery -->
+    <script src="../bower_components/jquery/dist/jquery.min.js"></script>
+    <!-- Bootstrap Core JavaScript -->
+    <script src="../bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    <!-- Metis Menu Plugin JavaScript -->
+    <script src="../bower_components/metisMenu/dist/metisMenu.min.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="../dist/js/sb-admin-2.js"></script>
+    <script src="../js/js.js"></script>
+</body>
+</html>

@@ -1,0 +1,478 @@
+﻿<?php
+include "{$_SERVER[DOCUMENT_ROOT]}/include/config.php";
+include "./session_admin.php";
+mysql_query("SET NAMES 'utf8'");
+// post 메소드로 전달된 값 받아오기
+$datesch_s = $_REQUEST['datesch_s'];
+$datesch_f = $_REQUEST['datesch_f'];
+$datesch_s = "";
+$datesch_f = "";
+if($datesch_s!="") $sql_date_s = "AND L2.Today>='$datesch_s'";
+if($datesch_f!="") $sql_date_f = "AND L2.Today<='$datesch_f'";
+
+
+/*
+if($regdate == "") {
+    // default value
+    $now = date_create(date("Y-m-d"));
+    $year = (int)date_format($now, "Y");
+    $month = (int)date_format($now, "m");
+    $regdate = $year."-".$month;
+}
+if($today == "") {
+    // default value
+    $now = date_create(date("Y-m-d"));
+    $year = (int)date_format($now, "Y");
+    $month = (int)date_format($now, "m");
+    $today = $year."-".$month;
+}
+// 선택 년/월
+$regstr = explode("-", $regdate);
+$reg_year = (int)$regstr[0];
+$reg_month = (int)$regstr[1];
+$todstr = explode("-", $today);
+$tod_year = (int)$todstr[0];
+$tod_month = (int)$todstr[1];
+// 선택한 달의 마지막 날짜
+$reg_end = date("t", mktime(0, 0, 0, $reg_month, 1, $reg_year));
+$tod_end = date("t", mktime(0, 0, 0, $tod_month, 1, $tod_year));
+// interval
+$interval = array("interval -7 day", "interval -1 month", "interval -3 month");
+// 컬럼이름에 들어갈 기간
+$term = array("1week", "1mon", "3mon");
+*/
+
+$utm_source = array();
+$utm_campaign = array();
+$utm_content = array();
+
+// 유입별 무료체험 신청자수
+/*
+    $utm_source[][0] 
+    $utm_medium[][0]
+    $utm_content[][0]
+*/
+$sql = "
+        SELECT L2.Path, COUNT(L2.idx) AS cnt_trial
+          FROM LYDDIE2 L2 
+          WHERE 
+            L2.State=1
+            AND L2.Repeatition=0
+            AND L2.Path IS NOT NULL
+            AND L2.Path<>''
+            $sql_date_s
+            $sql_date_f
+        GROUP BY
+            L2.Path
+        ;
+    ";
+$result=mysql_query($sql, $dbconn) or die(mysql_error());
+while($row=mysql_fetch_array($result)){
+    $utm_str = $row[Path];
+    $utm_arr = explode("_", $utm_str);
+    $source = $utm_arr[0];
+    $campaign = $utm_arr[1];
+    $content = $utm_arr[2];
+    if (array_key_exists($source, $utm_source)){
+        $utm_source[$source][0] += $row[cnt_trial];
+
+    } else {
+        $utm_source[$source][0] = $row[cnt_trial];
+    }
+    if (array_key_exists($campaign, $utm_campaign)){
+        $utm_campaign[$campaign][0] += $row[cnt_trial];
+
+    } else {
+        $utm_campaign[$campaign][0] = $row[cnt_trial];
+    }
+    if (array_key_exists($content, $utm_content)){
+        $utm_content[$content][0] += $row[cnt_trial];
+
+    } else {
+        $utm_content[$content][0] = $row[cnt_trial];
+    }
+}
+
+// 유입별(매체, 컨텐츠, 페이지) 결제자
+/*
+    $utm_source[][1] 
+    $utm_medium[][1]
+    $utm_content[][1]
+*/
+$sql = "
+        SELECT L2.Path, COUNT(L2.idx) AS cnt_pay
+          FROM LYDDIE2 L2 
+            INNER JOIN (SELECT M.KaKaoId, T.MemberId, T.RegDate 
+                          FROM MEMBER M INNER JOIN Tutoring T
+                            ON M.MemberId=T.MemberId
+                            WHERE 
+                              T.State=1
+                              AND T.Repurchase=0
+                          GROUP BY T.MemberId
+                          ORDER BY T.idx DESC) TM
+            ON L2.KakaoId=TM.KaKaoId
+          WHERE 
+            L2.State=1
+            AND L2.Today<=TM.RegDate 
+            AND L2.Repeatition=0
+            AND L2.Path IS NOT NULL
+            AND L2.Path<>''
+            $sql_date_s
+            $sql_date_f
+        GROUP BY
+            L2.Path
+            ;
+    ";
+$result=mysql_query($sql, $dbconn) or die(mysql_error());
+
+while($row=mysql_fetch_array($result)){
+    $utm_str = $row[Path];
+    $utm_arr = explode("_", $utm_str);
+    $source = $utm_arr[0];
+    $campaign = $utm_arr[1];
+    $content = $utm_arr[2];
+    if (array_key_exists($source, $utm_source)){
+        $utm_source[$source][1] += $row[cnt_pay];
+
+    } else {
+        $utm_source[$source][1] = $row[cnt_pay];
+    }
+    if (array_key_exists($campaign, $utm_campaign)){
+        $utm_campaign[$campaign][1] += $row[cnt_pay];
+
+    } else {
+        $utm_campaign[$campaign][1] = $row[cnt_pay];
+    }
+    if (array_key_exists($content, $utm_content)){
+        $utm_content[$content][1] += $row[cnt_pay];
+
+    } else {
+        $utm_content[$content][1] = $row[cnt_pay];
+    }
+}
+// 유입별(매체, 컨텐츠, 페이지) 재구매자
+/*
+    $utm_source[][2] 
+    $utm_medium[][2]
+    $utm_content[][2]
+*/
+$sql = "
+        SELECT L2.Path, COUNT(L2.idx) AS cnt_repur
+          FROM LYDDIE2 L2 
+            INNER JOIN (SELECT M.KaKaoId, T.MemberId, T.RegDate 
+                          FROM MEMBER M INNER JOIN Tutoring T
+                            ON M.MemberId=T.MemberId
+                            WHERE 
+                              T.State=1
+                              AND T.Repurchase=1
+                          GROUP BY T.MemberId
+                          ORDER BY idx DESC) TM
+            ON L2.KakaoId=TM.KaKaoId
+          WHERE 
+            L2.State=1
+            AND L2.Today<=TM.RegDate 
+            AND L2.Repeatition=0
+            AND L2.Path IS NOT NULL
+            AND L2.Path<>''
+            $sql_date_s
+            $sql_date_f
+        GROUP BY
+            L2.Path
+            ;
+    ";
+$result=mysql_query($sql, $dbconn) or die(mysql_error());
+
+while($row=mysql_fetch_array($result)){
+    $utm_str = $row[Path];
+    $utm_arr = explode("_", $utm_str);
+    $source = $utm_arr[0];
+    $campaign = $utm_arr[1];
+    $content = $utm_arr[2];
+    if (array_key_exists($source, $utm_source)){
+        $utm_source[$source][2] += $row[cnt_repur];
+
+    } else {
+        $utm_source[$source][2] = $row[cnt_repur];
+    }
+    if (array_key_exists($campaign, $utm_campaign)){
+        $utm_campaign[$campaign][2] += $row[cnt_repur];
+
+    } else {
+        $utm_campaign[$campaign][2] = $row[cnt_repur];
+    }
+    if (array_key_exists($content, $utm_content)){
+        $utm_content[$content][2] += $row[cnt_repur];
+
+    } else {
+        $utm_content[$content][2] = $row[cnt_repur];
+    }
+}
+// 유입별(매체, 컨텐츠, 페이지) 진체험자
+/*
+    $utm_source[][3] 
+    $utm_medium[][3]
+    $utm_content[][3]
+*/
+$sql = "
+        SELECT L2.Path, COUNT(L2.idx) AS cnt_real
+          FROM LYDDIE2 L2 INNER JOIN Tutoring_list TL
+            ON L2.KakaoId=TL.Student
+          WHERE 
+            TL.Content=11
+            AND TL.Cnt_tutee>=5
+            AND L2.Today<=TL.Chat_date 
+            AND L2.State=1
+            AND L2.Repeatition=0
+            AND L2.Path IS NOT NULL
+            AND L2.Path<>''
+            $sql_date_s
+            $sql_date_f
+        GROUP BY
+            L2.Path
+            ;
+    ";
+$result=mysql_query($sql, $dbconn) or die(mysql_error());
+
+while($row=mysql_fetch_array($result)){
+    $utm_str = $row[Path];
+    $utm_arr = explode("_", $utm_str);
+    $source = $utm_arr[0];
+    $campaign = $utm_arr[1];
+    $content = $utm_arr[2];
+    if (array_key_exists($source, $utm_source)){
+        $utm_source[$source][3] += $row[cnt_trial];
+
+    } else {
+        $utm_source[$source][3] = $row[cnt_trial];
+    }
+    if (array_key_exists($campaign, $utm_campaign)){
+        $utm_campaign[$campaign][3] += $row[cnt_trial];
+
+    } else {
+        $utm_campaign[$campaign][3] = $row[cnt_trial];
+    }
+    if (array_key_exists($content, $utm_content)){
+        $utm_content[$content][3] += $row[cnt_trial];
+
+    } else {
+        $utm_content[$content][3] = $row[cnt_trial];
+    }
+}
+
+/*
+get array keys
+$utm_source = array();
+$utm_campaign = array();
+$utm_content = array();
+*/
+
+$utm_source_keys = array_keys($utm_source);
+$utm_campaign_keys = array_keys($utm_campaign);
+$utm_content_keys = array_keys($utm_content);
+
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>SB Admin 2 - Bootstrap Admin Theme</title>
+    <!-- Bootstrap Core CSS -->
+    <link href="../bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- MetisMenu CSS -->
+    <link href="../bower_components/metisMenu/dist/metisMenu.min.css" rel="stylesheet">
+    <!-- Timeline CSS -->
+    <!-- Custom CSS -->
+    <link href="../dist/css/sb-admin-2.css" rel="stylesheet">
+    <!-- Morris Charts CSS -->
+    <!-- Custom Fonts -->
+    <link href="../bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <style>
+        h3 {
+            text-align: left;
+            text-decoration: underline;
+        }
+
+        table tr td {
+            vertical-align: top;
+        }
+    </style>
+    <script>
+        function dbupdate(){
+            var f = document.myform;
+            f.mode.value = "update";
+            $("form[name='myform']").submit();
+        }
+    </script>
+</head>
+<body>
+    <div id="wrapper">
+        <? include "../common/include/nav.html"; ?>
+        <!-- Navigation -->
+        <div id="page-wrapper">
+            <div class="row">
+                <div class="col-lg-12">
+                    <h1 class="page-header">유입별통계</h1>
+                </div>
+                <!-- /.col-lg-12 -->
+            </div>
+            <!-- /.row -->
+            <div class="row">
+
+                <div class="">
+                    <form name="myform" method="post">
+                        <div>
+                            <table width="100%" class="table-condensed">
+                                <colgroup>
+                                    <col width="50%" />
+                                    <col width="50%" />
+                                </colgroup>
+                                <tr>
+                                    <td style="padding:10px;">
+                                        <div>
+                                            <h3>매체별 결제자수</h3>
+                                            <div style="text-align: right;">
+                                                <div style="display: inline-block;"><input type="date" name="datesch_s" value="<?=$datesch_s?>" /></div>&nbsp;~&nbsp;
+                                                <div style="display: inline-block;"><input type="date" name="datesch_f" value="<?=$datesch_f?>" /></div>
+                                                <div style="display: inline-block;"><button type="submit" class="btn btn-xs btn-default">조회</button></div>
+                                            </div>
+                                            <br />
+                                            <table class="table table-bordered table-condensed">
+                                                <thead>
+                                                    <tr>
+                                                        <th></th>
+                                                        <th colspan="2">결제율</th>
+                                                        <th colspan="2">재구매율</th>
+                                                        <th colspan="2">진체험율</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?for($i=0; $i<count($utm_source_keys); $i++){?>
+                                                    <tr>
+                                                        <td><?=$utm_source_keys[$i]?></td>
+                                                        <td><?=$utm_source[$utm_source_keys[$i]][1]?>/<?=$utm_source[$utm_source_keys[$i]][0]?></td>
+                                                        <td>(<?=100 * round($utm_source[$utm_source_keys[$i]][1]/$utm_source[$utm_source_keys[$i]][0], 4)?>%)</td>
+                                                        <td><?=$utm_source[$utm_source_keys[$i]][2]?>/<?=$utm_source[$utm_source_keys[$i]][0]?></td>
+                                                        <td>(<?=100 * round($utm_source[$utm_source_keys[$i]][2]/$utm_source[$utm_source_keys[$i]][0], 4)?>%)</td>
+                                                        <td><?=$utm_source[$utm_source_keys[$i]][3]?>/<?=$utm_source[$utm_source_keys[$i]][0]?></td>
+                                                        <td>(<?=100 * round($utm_source[$utm_source_keys[$i]][3]/$utm_source[$utm_source_keys[$i]][0], 4)?>%)</td>
+                                                    </tr>
+                                                    <?}?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td style="padding:10px;">
+                                        <div>
+                                            <h3>컨텐츠별 결제자수</h3>
+                                            <div style="text-align: right;">
+                                                <div style="display: inline-block;"><input type="date" name="datesch_s" value="<?=$datesch_s?>" /></div>&nbsp;~&nbsp;
+                                                <div style="display: inline-block;"><input type="date" name="datesch_f" value="<?=$datesch_f?>" /></div>
+                                                <div style="display: inline-block;"><button type="submit" class="btn btn-xs btn-default">조회</button></div>
+                                            </div>
+                                            <br />
+                                            <table class="table table-bordered table-condensed">
+                                                <thead>
+                                                    <tr>
+                                                        <td></td>
+                                                        <td colspan="2">결제율</td>
+                                                        <td colspan="2">재구매율</td>
+                                                        <td colspan="2">진체험율</td>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?for($i=0; $i<count($utm_content_keys); $i++){?>
+                                                    <tr>
+                                                        <td><?=$utm_content_keys[$i]?></td>
+                                                        <td><?=$utm_content[$utm_content_keys[$i]][1]?>/<?=$utm_content[$utm_content_keys[$i]][0]?></td>
+                                                        <td>(<?=100 * round($utm_content[$utm_content_keys[$i]][1]/$utm_content[$utm_content_keys[$i]][0], 4)?>%)</td>
+                                                        <td><?=$utm_content[$utm_content_keys[$i]][2]?>/<?=$utm_content[$utm_content_keys[$i]][0]?></td>
+                                                        <td>(<?=100 * round($utm_content[$utm_content_keys[$i]][2]/$utm_content[$utm_content_keys[$i]][0], 4)?>%)</td>
+                                                        <td><?=$utm_content[$utm_content_keys[$i]][3]?>/<?=$utm_content[$utm_content_keys[$i]][0]?></td>
+                                                        <td>(<?=100 * round($utm_content[$utm_content_keys[$i]][3]/$utm_content[$utm_content_keys[$i]][0], 4)?>%)</td>
+                                                    </tr>
+                                                    <?}?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+
+                                    <td style="padding:10px;">
+                                        <div>
+                                            <h3>페이지별 결제자수</h3>
+                                            <div style="text-align: right;">
+                                                <div style="display: inline-block;"><input type="date" name="datesch_s" value="<?=$datesch_s?>" /></div>&nbsp;~&nbsp;
+                                                <div style="display: inline-block;"><input type="date" name="datesch_f" value="<?=$datesch_f?>" /></div>
+                                                <div style="display: inline-block;"><button type="submit" class="btn btn-xs btn-default">조회</button></div>
+                                            </div>
+                                            <br />
+                                            <table class="table table-bordered table-condensed">
+                                                <thead>
+                                                    <tr>
+                                                        <td></td>
+                                                        <td colspan="2">결제율</td>
+                                                        <td colspan="2">재구매율</td>
+                                                        <td colspan="2">진체험율</td>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?for($i=0; $i<count($utm_campaign_keys); $i++){?>
+                                                    <tr>
+                                                        <td><?=$utm_campaign_keys[$i]?></td>
+                                                        <td><?=$utm_campaign[$utm_campaign_keys[$i]][1]?>/<?=$utm_campaign[$utm_campaign_keys[$i]][0]?></td>
+                                                        <td>(<?=100 * round($utm_campaign[$utm_campaign_keys[$i]][1]/$utm_campaign[$utm_campaign_keys[$i]][0], 4)?>%)</td>
+                                                        <td><?=$utm_campaign[$utm_campaign_keys[$i]][2]?>/<?=$utm_campaign[$utm_campaign_keys[$i]][0]?></td>
+                                                        <td>(<?=100 * round($utm_campaign[$utm_campaign_keys[$i]][2]/$utm_campaign[$utm_campaign_keys[$i]][0], 4)?>%)</td>
+                                                        <td><?=$utm_campaign[$utm_campaign_keys[$i]][3]?>/<?=$utm_campaign[$utm_campaign_keys[$i]][0]?></td>
+                                                        <td>(<?=100 * round($utm_campaign[$utm_campaign_keys[$i]][3]/$utm_campaign[$utm_campaign_keys[$i]][0], 4)?>%)</td>
+                                                    </tr>
+                                                    <?}?>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <?
+                        // 데이터베이스와의 접속 종료
+                        mysql_close();
+                        ?>
+                    </form>
+                    <?
+                            $url = $_SERVER[PHP_SELF];
+                            $url_arr = explode("/", $url);
+                            $url = $url_arr[count($url_arr) - 1];
+                    ?>
+                    <div style="text-align: right; color: gray;">마지막수정: <?=date("Ymd H:i:s",filemtime($url))?></div>
+                </div>
+            </div>
+            <!-- /.row -->
+        </div>
+        <!-- /#page-wrapper -->
+    </div>
+    <!-- /#wrapper -->
+    <!-- jQuery -->
+    <script src="../bower_components/jquery/dist/jquery.min.js"></script>
+    <!-- Bootstrap Core JavaScript -->
+    <script src="../bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    <!-- Metis Menu Plugin JavaScript -->
+    <script src="../bower_components/metisMenu/dist/metisMenu.min.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="../dist/js/sb-admin-2.js"></script>
+</body>
+</html>
